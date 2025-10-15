@@ -22,16 +22,16 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create root project directories (dags/, src/, tests/, docker/, docs/)
-- [ ] T002 [P] Create Python package structure with __init__.py files in src/ subdirectories
-- [ ] T003 [P] Create requirements.txt with pinned dependencies (Airflow 2.8.1, PostgreSQL 15, Great Expectations 0.18, PySpark 3.5, pytest 8.0)
-- [ ] T004 [P] Create requirements-dev.txt with development tools (ruff, black, mypy, pytest-cov, pytest-docker, pre-commit)
-- [ ] T005 [P] Create pyproject.toml with tool configurations (black line-length=100, ruff rules, mypy strict mode)
-- [ ] T006 [P] Create pytest.ini with test configuration (markers for unit/integration/slow, coverage settings)
-- [ ] T007 [P] Create .env.example with environment variables template (Airflow config, PostgreSQL credentials, notification API keys)
-- [ ] T008 [P] Create README.md with project overview, setup instructions, and quick start guide
-- [ ] T009 [P] Create .gitignore for Python, Docker, IDE files
-- [ ] T010 [P] Create pre-commit-config.yaml with hooks (ruff, black, mypy, trailing whitespace)
+- [x] T001 Create root project directories (dags/, src/, tests/, docker/, docs/)
+- [x] T002 [P] Create Python package structure with __init__.py files in src/ subdirectories
+- [x] T003 [P] Create requirements.txt with pinned dependencies (Airflow 2.8.1, PostgreSQL 15, Great Expectations 0.18, PySpark 3.5, pytest 8.0)
+- [x] T004 [P] Create requirements-dev.txt with development tools (ruff, black, mypy, pytest-cov, pytest-docker, pre-commit)
+- [x] T005 [P] Create pyproject.toml with tool configurations (black line-length=100, ruff rules, mypy strict mode)
+- [x] T006 [P] Create pytest.ini with test configuration (markers for unit/integration/slow, coverage settings)
+- [x] T007 [P] Create .env.example with environment variables template (Airflow config, PostgreSQL credentials, notification API keys)
+- [x] T008 [P] Create README.md with project overview, setup instructions, and quick start guide
+- [x] T009 [P] Create .gitignore for Python, Docker, IDE files
+- [x] T010 [P] Create pre-commit-config.yaml with hooks (ruff, black, mypy, trailing whitespace)
 
 ---
 
@@ -43,30 +43,30 @@
 
 ### Database and Warehouse Setup
 
-- [ ] T011 Create warehouse schema SQL in src/warehouse/schema.sql (DimCustomer, DimProduct, DimDate, FactSales, QualityCheckResult, SparkJobSubmission, NotificationLog tables)
-- [ ] T012 Create warehouse seed data SQL in src/warehouse/seed_data.sql (1000 customers, 500 products, 5 years dates, 100k sales with intentional quality issues)
-- [ ] T013 [P] Create database migration scripts in src/warehouse/migrations/ for schema versioning
-- [ ] T014 [P] Implement mock data generator utility in src/utils/data_generator.py using Faker library with deterministic seeding
+- [x] T011 Create warehouse schema SQL in src/warehouse/schema.sql (DimCustomer, DimProduct, DimDate, FactSales, QualityCheckResult, SparkJobSubmission, NotificationLog tables)
+- [x] T012 Create warehouse seed data SQL in src/warehouse/seed_data.sql (1000 customers, 500 products, 5 years dates, 100k sales with intentional quality issues)
+- [x] T013 [P] Create database migration scripts in src/warehouse/migrations/ for schema versioning
+- [x] T014 [P] Implement mock data generator utility in src/utils/data_generator.py using Faker library with deterministic seeding
 
 ### Docker Environment
 
-- [ ] T015 Create Dockerfile for Airflow in docker/airflow/Dockerfile (extends apache/airflow:2.8-python3.11, installs custom dependencies)
-- [ ] T016 Create Dockerfile for PostgreSQL warehouse in docker/warehouse/Dockerfile (initializes with schema and seed data)
-- [ ] T017 Create docker-compose.yml with services (airflow-webserver, airflow-scheduler, airflow-init, postgres-warehouse, postgres-airflow)
-- [ ] T018 Configure volume mounts in docker-compose.yml for dags/, src/, tests/, and database persistence
-- [ ] T019 Configure health checks for all services in docker-compose.yml (ensure startup order and readiness)
+- [x] T015 Create Dockerfile for Airflow in docker/airflow/Dockerfile (extends apache/airflow:2.8-python3.11, installs custom dependencies)
+- [x] T016 Create Dockerfile for PostgreSQL warehouse in docker/warehouse/Dockerfile (initializes with schema and seed data)
+- [x] T017 Create docker-compose.yml with services (airflow-webserver, airflow-scheduler, airflow-init, postgres-warehouse, postgres-airflow)
+- [x] T018 Configure volume mounts in docker-compose.yml for dags/, src/, tests/, and database persistence
+- [x] T019 Configure health checks for all services in docker-compose.yml (ensure startup order and readiness)
 
 ### Base Utilities
 
-- [ ] T020 [P] Implement structured logger utility in src/utils/logger.py with Airflow context support (DAG ID, task ID, execution date, run ID)
-- [ ] T021 [P] Implement configuration loader utility in src/utils/config_loader.py for environment variables and JSON configs
-- [ ] T022 [P] Create base custom hook in src/hooks/warehouse_hook.py extending PostgresHook for warehouse operations
+- [x] T020 [P] Implement structured logger utility in src/utils/logger.py with Airflow context support (DAG ID, task ID, execution date, run ID)
+- [x] T021 [P] Implement configuration loader utility in src/utils/config_loader.py for environment variables and JSON configs
+- [x] T022 [P] Create base custom hook in src/hooks/warehouse_hook.py extending PostgresHook for warehouse operations
 
 ### Testing Infrastructure
 
-- [ ] T023 Create pytest conftest.py with fixtures (mock Airflow context, test database, mock webhook servers)
-- [ ] T024 [P] Create test fixtures directory structure in tests/fixtures/ (mock_configs/, mock_datasets/)
-- [ ] T025 [P] Implement pytest markers in pytest.ini (@pytest.mark.unit, @pytest.mark.integration, @pytest.mark.slow)
+- [x] T023 Create pytest conftest.py with fixtures (mock Airflow context, test database, mock webhook servers)
+- [x] T024 [P] Create test fixtures directory structure in tests/fixtures/ (mock_configs/, mock_datasets/)
+- [x] T025 [P] Implement pytest markers in pytest.ini (@pytest.mark.unit, @pytest.mark.integration, @pytest.mark.slow)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

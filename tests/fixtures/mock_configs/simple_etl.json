@@ -1,0 +1,38 @@
+{
+  "dag_id": "simple_etl",
+  "description": "Simple ETL pipeline for testing",
+  "schedule_interval": "0 2 * * *",
+  "start_date": "2024-01-01",
+  "default_args": {
+    "owner": "airflow",
+    "retries": 2,
+    "retry_delay_minutes": 5,
+    "email_on_failure": false,
+    "email_on_retry": false
+  },
+  "tasks": [
+    {
+      "task_id": "extract",
+      "operator": "BashOperator",
+      "params": {
+        "bash_command": "echo 'Extracting data'"
+      }
+    },
+    {
+      "task_id": "transform",
+      "operator": "BashOperator",
+      "params": {
+        "bash_command": "echo 'Transforming data'"
+      },
+      "dependencies": ["extract"]
+    },
+    {
+      "task_id": "load",
+      "operator": "BashOperator",
+      "params": {
+        "bash_command": "echo 'Loading data'"
+      },
+      "dependencies": ["transform"]
+    }
+  ]
+}

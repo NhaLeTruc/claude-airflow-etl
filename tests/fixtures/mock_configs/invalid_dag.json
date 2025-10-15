@@ -1,0 +1,10 @@
+{
+  "dag_id": "invalid_dag_missing_fields",
+  "description": "Invalid DAG configuration for negative testing",
+  "tasks": [
+    {
+      "task_id": "invalid_task",
+      "operator": "BashOperator"
+    }
+  ]
+}

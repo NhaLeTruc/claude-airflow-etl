@@ -1,0 +1,26 @@
+[
+  {
+    "customer_id": 1,
+    "customer_key": "CUST_001",
+    "customer_name": "John Doe",
+    "email": "john.doe@example.com",
+    "country": "United States",
+    "segment": "Enterprise"
+  },
+  {
+    "customer_id": 2,
+    "customer_key": "CUST_002",
+    "customer_name": "Jane Smith",
+    "email": "jane.smith@example.com",
+    "country": "Canada",
+    "segment": "SMB"
+  },
+  {
+    "customer_id": 3,
+    "customer_key": "CUST_003",
+    "customer_name": "Bob Johnson",
+    "email": null,
+    "country": "United Kingdom",
+    "segment": "Consumer"
+  }
+]
