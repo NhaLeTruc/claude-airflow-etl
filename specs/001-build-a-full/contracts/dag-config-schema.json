@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://airflow-etl-demo.example.com/schemas/dag-config.schema.json",
+  "title": "Airflow DAG Configuration Schema",
+  "description": "JSON Schema for validating Airflow DAG configuration files used by the dynamic DAG factory",
+  "type": "object",
+  "required": ["dag_id", "tasks"],
+  "properties": {
+    "dag_id": {
+      "type": "string",
+      "description": "Unique DAG identifier following naming convention: {domain}_{pipeline_name}_{version}",
+      "pattern": "^[a-z][a-z0-9_]*_v[0-9]+$",
+      "examples": ["sales_daily_etl_v1", "customer_sync_weekly_v2"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable DAG description",
+      "maxLength": 500
+    },
+    "schedule": {
+      "oneOf": [
+        { "type": "string", "description": "Cron expression or Airflow preset" },
+        { "type": "null", "description": "Manual trigger only" }
+      ],
+      "examples": ["@daily", "@hourly", "0 0 * * *", null]
+    },
+    "catchup": {
+      "type": "boolean",
+      "description": "Whether to backfill missed runs",
+      "default": false
+    },
+    "max_active_runs": {
+      "type": "integer",
+      "description": "Maximum concurrent DAG runs",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 1
+    },
+    "tags": {
+      "type": "array",
+      "description": "DAG categorization tags",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      },
+      "uniqueItems": true,
+      "examples": [["beginner", "data-quality", "demo"]]
+    },
+    "default_args": {
+      "type": "object",
+      "description": "Default arguments applied to all tasks",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "DAG owner email or username",
+          "examples": ["data-engineering@example.com", "john.doe"]
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Number of retry attempts",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 3
+        },
+        "retry_delay": {
+          "type": "integer",
+          "description": "Seconds between retries",
+          "minimum": 60,
+          "maximum": 3600,
+          "default": 300
+        },
+        "retry_exponential_backoff": {
+          "type": "boolean",
+          "description": "Use exponential backoff for retries",
+          "default": true
+        },
+        "execution_timeout": {
+          "type": "integer",
+          "description": "Maximum task execution time in seconds",
+          "minimum": 60,
+          "maximum": 86400
+        },
+        "email_on_failure": {
+          "type": "boolean",
+          "description": "Send email notification on task failure",
+          "default": false
+        },
+        "email_on_retry": {
+          "type": "boolean",
+          "description": "Send email notification on task retry",
+          "default": false
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "List of tasks in DAG",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/task"
+      }
+    }
+  },
+  "definitions": {
+    "task": {
+      "type": "object",
+      "required": ["task_id", "operator", "parameters"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "Unique task identifier within DAG",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "examples": ["extract_sales_data", "validate_schema"]
+        },
+        "operator": {
+          "type": "string",
+          "description": "Operator class name or registered alias",
+          "examples": [
+            "PostgresOperator",
+            "SparkStandaloneOperator",
+            "SparkYarnOperator",
+            "SparkKubernetesOperator",
+            "EmailNotificationOperator",
+            "TeamsNotificationOperator",
+            "TelegramNotificationOperator",
+            "SchemaValidationOperator",
+            "CompletenessCheckOperator",
+            "FreshnessCheckOperator",
+            "UniquenessCheckOperator",
+            "NullRateCheckOperator"
+          ]
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Operator-specific parameters (validated by operator schema)",
+          "additionalProperties": true
+        },
+        "upstream_tasks": {
+          "type": "array",
+          "description": "List of task IDs this task depends on",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Override default retry count for this task",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "retry_delay": {
+          "type": "integer",
+          "description": "Override default retry delay for this task (seconds)",
+          "minimum": 60,
+          "maximum": 3600
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Task-specific execution timeout in seconds",
+          "minimum": 60,
+          "maximum": 86400
+        }
+      }
+    }
+  }
+}
