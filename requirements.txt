@@ -1,0 +1,30 @@
+# Apache Airflow ETL Demo Platform - Production Dependencies
+# All dependencies pinned to specific versions for reproducibility
+
+# Core Airflow
+apache-airflow==2.8.1
+apache-airflow-providers-postgres==5.10.0
+
+# Database
+psycopg2-binary==2.9.9
+SQLAlchemy==1.4.51
+
+# Data Quality
+great-expectations==0.18.8
+
+# Spark Integration
+pyspark==3.5.0
+
+# Utilities
+python-dotenv==1.0.0
+Faker==22.0.0
+
+# Notifications
+requests==2.31.0
+python-telegram-bot==20.7
+
+# JSON Schema Validation
+jsonschema==4.20.0
+
+# Jinja2 for templating (Airflow dependency, pinned for consistency)
+Jinja2==3.1.2
