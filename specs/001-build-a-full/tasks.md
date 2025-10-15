@@ -110,19 +110,19 @@
 
 ### Tests for User Story 2 (TDD: Write tests FIRST) ⚠️
 
-- [ ] T040 [P] [US2] Unit test for retry policy configuration in tests/unit/test_utils/test_retry_policies.py (test exponential backoff calculation, max retries enforcement)
-- [ ] T041 [P] [US2] Unit test for timeout handling in tests/unit/test_utils/test_timeout_handler.py (test task termination on timeout, correct status marking)
-- [ ] T042 [P] [US2] Integration test for retry behavior in tests/integration/test_retry_behavior.py (test task retries 3 times with backoff, then fails permanently)
-- [ ] T043 [P] [US2] Integration test for failure propagation in tests/integration/test_failure_handling.py (test downstream tasks skip, parallel tasks continue, state recovery after interruption)
+- [x] T040 [P] [US2] Unit test for retry policy configuration in tests/unit/test_utils/test_retry_policies.py (test exponential backoff calculation, max retries enforcement)
+- [x] T041 [P] [US2] Unit test for timeout handling in tests/unit/test_utils/test_timeout_handler.py (test task termination on timeout, correct status marking)
+- [x] T042 [P] [US2] Integration test for retry behavior in tests/integration/test_retry_behavior.py (test task retries 3 times with backoff, then fails permanently)
+- [x] T043 [P] [US2] Integration test for failure propagation in tests/integration/test_failure_handling.py (test downstream tasks skip, parallel tasks continue, state recovery after interruption)
 
 ### Implementation for User Story 2
 
-- [ ] T044 [P] [US2] Implement retry utility functions in src/utils/retry_policies.py (calculate exponential backoff, generate retry delay values)
-- [ ] T045 [P] [US2] Implement timeout monitoring utility in src/utils/timeout_handler.py (check task execution time, trigger termination)
-- [ ] T046 [US2] Create example DAG demonstrating retry logic in dags/examples/beginner/demo_scheduled_pipeline_v1.py (configure retries, exponential backoff, timeout)
-- [ ] T047 [US2] Create example DAG demonstrating failure handling in dags/examples/advanced/demo_failure_recovery_v1.py (intentional task failures, downstream skip, parallel continue, compensation logic)
-- [ ] T048 [US2] Add structured error logging with full context in all example DAGs (execution date, run ID, task ID, error type, stack trace)
-- [ ] T049 [P] [US2] Document retry and failure handling patterns in docs/operator_guide.md
+- [x] T044 [P] [US2] Implement retry utility functions in src/utils/retry_policies.py (calculate exponential backoff, generate retry delay values)
+- [x] T045 [P] [US2] Implement timeout monitoring utility in src/utils/timeout_handler.py (check task execution time, trigger termination)
+- [x] T046 [US2] Create example DAG demonstrating retry logic in dags/examples/beginner/demo_scheduled_pipeline_v1.py (configure retries, exponential backoff, timeout)
+- [x] T047 [US2] Create example DAG demonstrating failure handling in dags/examples/advanced/demo_failure_recovery_v1.py (intentional task failures, downstream skip, parallel continue, compensation logic)
+- [x] T048 [US2] Add structured error logging with full context in all example DAGs (execution date, run ID, task ID, error type, stack trace)
+- [x] T049 [P] [US2] Document retry and failure handling patterns in docs/operator_guide.md
 
 **Checkpoint**: Retry, timeout, and failure handling should work correctly across all DAG types
 
