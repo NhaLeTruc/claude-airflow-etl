@@ -80,23 +80,23 @@
 
 ### Tests for User Story 1 (TDD: Write tests FIRST, ensure they FAIL before implementation) ⚠️
 
-- [ ] T026 [P] [US1] Unit test for JSON schema validation in tests/unit/test_dag_factory/test_config_validator.py (test valid configs pass, invalid fail with specific errors)
-- [ ] T027 [P] [US1] Unit test for operator registry in tests/unit/test_dag_factory/test_operator_registry.py (test operator registration, lookup, and instantiation)
-- [ ] T028 [P] [US1] Unit test for DAG builder in tests/unit/test_dag_factory/test_dag_builder.py (test DAG creation from config, task dependency resolution, circular dependency detection)
-- [ ] T029 [P] [US1] Integration test for DAG parsing in tests/integration/test_dag_parsing.py (test all configs parse without errors, correct DAG count)
-- [ ] T030 [P] [US1] Integration test for dynamic DAG execution in tests/integration/test_dynamic_dag_execution.py (test JSON-configured DAG runs successfully end-to-end)
+- [x] T026 [P] [US1] Unit test for JSON schema validation in tests/unit/test_dag_factory/test_config_validator.py (test valid configs pass, invalid fail with specific errors)
+- [x] T027 [P] [US1] Unit test for operator registry in tests/unit/test_dag_factory/test_operator_registry.py (test operator registration, lookup, and instantiation)
+- [x] T028 [P] [US1] Unit test for DAG builder in tests/unit/test_dag_factory/test_dag_builder.py (test DAG creation from config, task dependency resolution, circular dependency detection)
+- [x] T029 [P] [US1] Integration test for DAG parsing in tests/integration/test_dag_parsing.py (test all configs parse without errors, correct DAG count)
+- [x] T030 [P] [US1] Integration test for dynamic DAG execution in tests/integration/test_dynamic_dag_execution.py (test JSON-configured DAG runs successfully end-to-end)
 
 ### Implementation for User Story 1
 
-- [ ] T031 [P] [US1] Copy JSON schemas from contracts/ to dags/config/schemas/ (dag-config-schema.json, operator-parameters-schema.json)
-- [ ] T032 [US1] Implement JSON config validator in dags/factory/config_validator.py (validate against schema, check circular dependencies, verify operator references)
-- [ ] T033 [US1] Implement operator registry in dags/factory/operator_registry.py (register built-in and custom operators, provide lookup and instantiation)
-- [ ] T034 [US1] Implement DAG builder factory in dags/factory/dag_builder.py (read JSON, instantiate DAG, create tasks, set dependencies, handle errors)
-- [ ] T035 [US1] Create DAG factory main file in dags/factory/__init__.py (discover JSON configs via glob, generate DAGs, expose to Airflow globals())
-- [ ] T036 [P] [US1] Create example JSON config for simple extract-load in dags/config/examples/simple_extract_load_v1.json
-- [ ] T037 [P] [US1] Create example JSON config with validation errors for testing in tests/fixtures/mock_configs/invalid_config.json
-- [ ] T038 [US1] Add logging to DAG factory for config discovery, validation errors, and DAG generation success/failure
-- [ ] T039 [US1] Document JSON configuration schema and usage in docs/dag_configuration.md
+- [x] T031 [P] [US1] Copy JSON schemas from contracts/ to dags/config/schemas/ (dag-config-schema.json, operator-parameters-schema.json)
+- [x] T032 [US1] Implement JSON config validator in dags/factory/config_validator.py (validate against schema, check circular dependencies, verify operator references)
+- [x] T033 [US1] Implement operator registry in dags/factory/operator_registry.py (register built-in and custom operators, provide lookup and instantiation)
+- [x] T034 [US1] Implement DAG builder factory in dags/factory/dag_builder.py (read JSON, instantiate DAG, create tasks, set dependencies, handle errors)
+- [x] T035 [US1] Create DAG factory main file in dags/factory/__init__.py (discover JSON configs via glob, generate DAGs, expose to Airflow globals())
+- [x] T036 [P] [US1] Create example JSON config for simple extract-load in dags/config/examples/simple_extract_load_v1.json
+- [x] T037 [P] [US1] Create example JSON config with validation errors for testing in tests/fixtures/mock_configs/invalid_config.json
+- [x] T038 [US1] Add logging to DAG factory for config discovery, validation errors, and DAG generation success/failure
+- [x] T039 [US1] Document JSON configuration schema and usage in docs/dag_configuration.md
 
 **Checkpoint**: At this point, JSON-configured DAGs should be fully functional and testable independently
 

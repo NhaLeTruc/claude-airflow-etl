@@ -1,0 +1,401 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://airflow-etl-demo.example.com/schemas/operator-parameters.schema.json",
+  "title": "Operator Parameters Schema",
+  "description": "Parameter schemas for custom Airflow operators",
+  "definitions": {
+    "SparkStandaloneOperator": {
+      "type": "object",
+      "required": ["application", "master_url"],
+      "properties": {
+        "application": {
+          "type": "string",
+          "description": "Path to Spark application JAR or Python file",
+          "examples": ["/opt/spark/apps/sales_aggregation.py"]
+        },
+        "master_url": {
+          "type": "string",
+          "description": "Spark master URL for standalone cluster",
+          "pattern": "^spark://[a-zA-Z0-9.-]+:[0-9]+$",
+          "examples": ["spark://spark-master:7077"]
+        },
+        "spark_conf": {
+          "type": "object",
+          "description": "Spark configuration properties",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "examples": [{
+            "spark.executor.memory": "2g",
+            "spark.executor.instances": "2"
+          }]
+        },
+        "application_args": {
+          "type": "array",
+          "description": "Command-line arguments for the application",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SparkYarnOperator": {
+      "type": "object",
+      "required": ["application", "yarn_queue"],
+      "properties": {
+        "application": {
+          "type": "string",
+          "description": "Path to Spark application JAR or Python file"
+        },
+        "yarn_queue": {
+          "type": "string",
+          "description": "YARN queue name",
+          "examples": ["default", "production", "etl"]
+        },
+        "num_executors": {
+          "type": "integer",
+          "description": "Number of executors",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 2
+        },
+        "executor_memory": {
+          "type": "string",
+          "description": "Memory per executor",
+          "pattern": "^[0-9]+[mg]$",
+          "examples": ["2g", "4096m"]
+        },
+        "executor_cores": {
+          "type": "integer",
+          "description": "CPU cores per executor",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 2
+        },
+        "driver_memory": {
+          "type": "string",
+          "description": "Driver memory",
+          "pattern": "^[0-9]+[mg]$",
+          "default": "1g"
+        }
+      }
+    },
+    "SparkKubernetesOperator": {
+      "type": "object",
+      "required": ["application", "namespace"],
+      "properties": {
+        "application": {
+          "type": "string",
+          "description": "Path to Spark application JAR or Python file"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Kubernetes namespace for Spark pods",
+          "examples": ["spark-jobs", "data-engineering"]
+        },
+        "image": {
+          "type": "string",
+          "description": "Docker image for Spark driver and executors",
+          "examples": ["apache/spark:3.5.0-python3"]
+        },
+        "spark_conf": {
+          "type": "object",
+          "description": "Spark configuration properties",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "service_account": {
+          "type": "string",
+          "description": "Kubernetes service account",
+          "default": "spark"
+        }
+      }
+    },
+    "EmailNotificationOperator": {
+      "type": "object",
+      "required": ["to", "subject", "body"],
+      "properties": {
+        "to": {
+          "oneOf": [
+            { "type": "string", "format": "email" },
+            {
+              "type": "array",
+              "items": { "type": "string", "format": "email" }
+            }
+          ],
+          "description": "Recipient email address(es)"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Email subject line (supports Jinja2 templating)",
+          "maxLength": 200,
+          "examples": ["DAG {{ dag.dag_id }} failed on {{ ds }}"]
+        },
+        "body": {
+          "type": "string",
+          "description": "Email body (supports Jinja2 templating, HTML allowed)"
+        },
+        "smtp_conn_id": {
+          "type": "string",
+          "description": "Airflow connection ID for SMTP server",
+          "default": "smtp_default"
+        },
+        "cc": {
+          "oneOf": [
+            { "type": "string", "format": "email" },
+            {
+              "type": "array",
+              "items": { "type": "string", "format": "email" }
+            }
+          ],
+          "description": "CC recipients"
+        },
+        "bcc": {
+          "oneOf": [
+            { "type": "string", "format": "email" },
+            {
+              "type": "array",
+              "items": { "type": "string", "format": "email" }
+            }
+          ],
+          "description": "BCC recipients"
+        }
+      }
+    },
+    "TeamsNotificationOperator": {
+      "type": "object",
+      "required": ["webhook_url", "title", "message"],
+      "properties": {
+        "webhook_url": {
+          "type": "string",
+          "description": "MS Teams incoming webhook URL",
+          "format": "uri"
+        },
+        "title": {
+          "type": "string",
+          "description": "Message card title",
+          "maxLength": 150
+        },
+        "message": {
+          "type": "string",
+          "description": "Message card body (supports Markdown)"
+        },
+        "theme_color": {
+          "type": "string",
+          "description": "Message card accent color (hex code)",
+          "pattern": "^[0-9A-Fa-f]{6}$",
+          "examples": ["0078D4", "FF0000", "00FF00"]
+        },
+        "facts": {
+          "type": "array",
+          "description": "Key-value facts to display in card",
+          "items": {
+            "type": "object",
+            "required": ["name", "value"],
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "TelegramNotificationOperator": {
+      "type": "object",
+      "required": ["bot_token", "chat_id", "message"],
+      "properties": {
+        "bot_token": {
+          "type": "string",
+          "description": "Telegram bot API token",
+          "pattern": "^[0-9]+:[A-Za-z0-9_-]+$"
+        },
+        "chat_id": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "integer" }
+          ],
+          "description": "Telegram chat ID or channel username"
+        },
+        "message": {
+          "type": "string",
+          "description": "Message text (supports Markdown and HTML)"
+        },
+        "parse_mode": {
+          "type": "string",
+          "enum": ["Markdown", "MarkdownV2", "HTML"],
+          "description": "Message formatting mode",
+          "default": "Markdown"
+        },
+        "disable_notification": {
+          "type": "boolean",
+          "description": "Send silently without notification sound",
+          "default": false
+        }
+      }
+    },
+    "SchemaValidationOperator": {
+      "type": "object",
+      "required": ["table", "expected_columns"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Fully qualified table name (schema.table)",
+          "examples": ["staging.sales", "warehouse.fact_sales"]
+        },
+        "expected_columns": {
+          "type": "array",
+          "description": "List of expected column names",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "expected_types": {
+          "type": "object",
+          "description": "Expected data types for columns (column_name: type)",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "examples": [{
+            "customer_id": "integer",
+            "total_amount": "decimal"
+          }]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["CRITICAL", "WARNING", "INFO"],
+          "description": "Severity level for validation failures",
+          "default": "CRITICAL"
+        },
+        "warehouse_conn_id": {
+          "type": "string",
+          "description": "Airflow connection ID for warehouse",
+          "default": "warehouse"
+        }
+      }
+    },
+    "CompletenessCheckOperator": {
+      "type": "object",
+      "required": ["table"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Fully qualified table name"
+        },
+        "expected_row_count": {
+          "type": "integer",
+          "description": "Exact expected row count (null = skip check)",
+          "minimum": 0
+        },
+        "min_row_count": {
+          "type": "integer",
+          "description": "Minimum acceptable row count",
+          "minimum": 0
+        },
+        "max_row_count": {
+          "type": "integer",
+          "description": "Maximum acceptable row count",
+          "minimum": 0
+        },
+        "row_count_tolerance": {
+          "type": "number",
+          "description": "Acceptable percentage deviation from expected (0.0-1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "examples": [0.05]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["CRITICAL", "WARNING", "INFO"],
+          "default": "WARNING"
+        }
+      }
+    },
+    "FreshnessCheckOperator": {
+      "type": "object",
+      "required": ["table", "timestamp_column", "max_age_seconds"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Fully qualified table name"
+        },
+        "timestamp_column": {
+          "type": "string",
+          "description": "Column containing timestamp to check",
+          "examples": ["created_at", "updated_at", "load_timestamp"]
+        },
+        "max_age_seconds": {
+          "type": "integer",
+          "description": "Maximum acceptable age in seconds",
+          "minimum": 1,
+          "examples": [3600, 86400]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["CRITICAL", "WARNING", "INFO"],
+          "default": "WARNING"
+        }
+      }
+    },
+    "UniquenessCheckOperator": {
+      "type": "object",
+      "required": ["table", "unique_columns"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Fully qualified table name"
+        },
+        "unique_columns": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          ],
+          "description": "Column(s) that should be unique (composite key support)"
+        },
+        "null_as_distinct": {
+          "type": "boolean",
+          "description": "Treat NULL values as distinct for uniqueness check",
+          "default": false
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["CRITICAL", "WARNING", "INFO"],
+          "default": "CRITICAL"
+        }
+      }
+    },
+    "NullRateCheckOperator": {
+      "type": "object",
+      "required": ["table", "columns"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Fully qualified table name"
+        },
+        "columns": {
+          "type": "object",
+          "description": "Columns to check with max acceptable null rate (0.0-1.0)",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "examples": [{
+            "customer_id": 0.0,
+            "email": 0.05,
+            "phone": 0.2
+          }]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["CRITICAL", "WARNING", "INFO"],
+          "default": "WARNING"
+        }
+      }
+    }
+  }
+}
