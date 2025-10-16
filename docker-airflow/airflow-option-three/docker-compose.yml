@@ -1,0 +1,609 @@
+x-airflow-common: &airflow-common
+  build:
+    context: ./infra/airflow
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: ${AIRFLOW_EXECUTOR}
+    AIRFLOW__CORE__AUTH_MANAGER: ${AIRFLOW_AUTH_MANAGER}
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW_DATABASE_SQL_ALCHEMY_CONN}
+    AIRFLOW__CELERY__RESULT_BACKEND: ${AIRFLOW_CELERY_RESULT_BACKEND}
+    AIRFLOW__CELERY__BROKER_URL: ${AIRFLOW_CELERY_BROKER_URL}
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: ${AIRFLOW_DAGS_ARE_PAUSED_AT_CREATION}
+    AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW_LOAD_EXAMPLES}
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: ${AIRFLOW_EXECUTION_API_SERVER_URL}
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: ${AIRFLOW_SCHEDULER_ENABLE_HEALTH_CHECK}
+    AIRFLOW__API_AUTH__JWT_SECRET_KEY: ${AIRFLOW__API_AUTH__JWT_SECRET_KEY}
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET_KEY}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_API_SECRET_KEY}
+    AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+    S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    S3_ENDPOINT: ${S3_ENDPOINT:-minio:9000}
+    SPARK_HOME: /opt/spark
+    SPARK_JARS_DIR: /opt/spark/jars
+    AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: "true"
+  volumes:
+    - ./infra/airflow/dags:/opt/airflow/dags
+    - ./infra/airflow/logs:/opt/airflow/logs
+    - ./infra/airflow/plugins:/opt/airflow/plugins
+    - ./infra/airflow/processing/spark/jobs:/opt/spark/jobs
+    - .:/workspace:cached
+  user: "${AIRFLOW_UID}:0"
+  depends_on:
+    redis:
+      condition: service_started
+    postgres:
+      condition: service_started
+services:
+  minio:
+    build:
+      context: ./infra/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    profiles: [airflow,core]
+
+  hive-metastore:
+    build:
+      context: ./infra/hive-metastore
+    environment:
+      - HIVE_METASTORE_DB_TYPE=${HIVE_METASTORE_DB_TYPE}
+      - HIVE_METASTORE_DB_HOST=${HIVE_METASTORE_DB_HOST}
+      - HIVE_METASTORE_DB_NAME=${HIVE_METASTORE_DB_NAME}
+      - HIVE_METASTORE_DB_USER=${HIVE_METASTORE_DB_USER}
+      - HIVE_METASTORE_DB_PASS=${HIVE_METASTORE_DB_PASS}
+    depends_on:
+      - postgres
+    ports:
+      - "9083:9083"
+    healthcheck:
+      test: ["CMD", "pidof", "java"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    profiles: [core]
+
+  trino:
+    build:
+      context: ./infra/trino
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/trino/config:/etc/trino
+      - trino-data:/var/trino/data
+    user: "0:0"
+    depends_on:
+      - hive-metastore
+      - minio
+      - clickhouse
+    profiles: [core]
+
+  postgres:
+    build:
+      context: ./infra/postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_CDC_USER: ${POSTGRES_CDC_USER:-cdc_reader}
+      POSTGRES_CDC_PASSWORD: ${POSTGRES_CDC_PASSWORD:-cdc_reader_pwd}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    profiles: [core,airflow]
+
+  debezium:
+    build:
+      context: ./infra/debezium
+    environment:
+      - BOOTSTRAP_SERVERS=${DEBEZIUM_BOOTSTRAP_SERVERS}
+      - GROUP_ID=${DEBEZIUM_GROUP_ID}
+      - CONFIG_STORAGE_TOPIC=${DEBEZIUM_CONFIG_STORAGE_TOPIC}
+      - OFFSET_STORAGE_TOPIC=${DEBEZIUM_OFFSET_STORAGE_TOPIC}
+      - STATUS_STORAGE_TOPIC=${DEBEZIUM_STATUS_STORAGE_TOPIC}
+      - POSTGRES_CDC_USER=${POSTGRES_CDC_USER:-cdc_reader}
+      - POSTGRES_CDC_PASSWORD=${POSTGRES_CDC_PASSWORD:-cdc_reader_pwd}
+    depends_on:
+      - kafka
+      - postgres
+    ports:
+      - "8083:8083"
+    profiles: [core]
+
+  kafka:
+    build:
+      context: ./infra/kafka
+    environment:
+      KAFKA_CFG_NODE_ID: ${KAFKA_NODE_ID}
+      KAFKA_CFG_PROCESS_ROLES: ${KAFKA_PROCESS_ROLES}
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: ${KAFKA_CONTROLLER_QUORUM_VOTERS}
+      KAFKA_CFG_LISTENERS: ${KAFKA_LISTENERS}
+      KAFKA_CFG_ADVERTISED_LISTENERS: ${KAFKA_ADVERTISED_LISTENERS}
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: ${KAFKA_CONTROLLER_LISTENER_NAMES}
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: ${KAFKA_AUTO_CREATE_TOPICS_ENABLE}
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1024M
+        reservations:
+          cpus: '0.50'
+          memory: 512M
+    profiles: [core]
+
+  schema-registry:
+    build:
+      context: ./infra/schema-registry
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: ${SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS}
+      SCHEMA_REGISTRY_HOST_NAME: ${SCHEMA_REGISTRY_HOST_NAME}
+      SCHEMA_REGISTRY_LISTENERS: ${SCHEMA_REGISTRY_LISTENERS}
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    profiles: [core]
+
+  data-generator:
+    build:
+      context: ./infra/data-generator
+    environment:
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-kafka:9092}
+      SCHEMA_REGISTRY_URL: ${SCHEMA_REGISTRY_URL:-http://schema-registry:8081}
+      PG_DSN: ${PG_DSN:-host=postgres port=5432 dbname=demo user=admin password=admin}
+      RATE_MPS: ${DATA_GEN_RATE_MPS:-40}
+      SEED_USERS: ${DATA_GEN_SEED_USERS:-500}
+      SEED_PRODUCTS: ${DATA_GEN_SEED_PRODUCTS:-200}
+      SEED_WAREHOUSES: ${DATA_GEN_SEED_WAREHOUSES:-5}
+      SEED_SUPPLIERS: ${DATA_GEN_SEED_SUPPLIERS:-20}
+      P_CUSTOMER_INTERACTION: ${DATA_GEN_P_CUSTOMER_INTERACTION:-0.8}
+      P_INVENTORY_EVENT: ${DATA_GEN_P_INVENTORY_EVENT:-0.3}
+      TOPIC_ORDERS: ${DATA_GEN_TOPIC_ORDERS:-orders.v1}
+      TOPIC_PAYMENTS: ${DATA_GEN_TOPIC_PAYMENTS:-payments.v1}
+      TOPIC_SHIPMENTS: ${DATA_GEN_TOPIC_SHIPMENTS:-shipments.v1}
+      TOPIC_INVENTORY_CHANGES: ${DATA_GEN_TOPIC_INVENTORY_CHANGES:-inventory-changes.v1}
+      TOPIC_CUSTOMER_INTERACTIONS: ${DATA_GEN_TOPIC_CUSTOMER_INTERACTIONS:-customer-interactions.v1}
+    #depends_on:
+    #  postgres:
+    #    condition: service_healthy
+    #  kafka:
+    #    condition: service_healthy
+    #  schema-registry:
+    #    condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import psycopg2, os; from confluent_kafka.schema_registry import SchemaRegistryClient; pg_dsn = os.getenv('PG_DSN', 'host=postgres port=5432 dbname=demo user=admin password=admin'); sr_url = os.getenv('SCHEMA_REGISTRY_URL', 'http://schema-registry:8081'); conn = psycopg2.connect(pg_dsn); conn.close(); sr = SchemaRegistryClient({'url': sr_url}); sr.get_subjects(); print('Dependencies healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    profiles: [datagen]
+
+
+  kafka-ui:
+    build:
+      context: ./infra/kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ${KAFKA_UI_CLUSTERS_0_NAME}
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: ${KAFKA_UI_CLUSTERS_0_BOOTSTRAP_SERVERS}
+      KAFKA_CLUSTERS_0_SCHEMA_REGISTRY: ${KAFKA_UI_CLUSTERS_0_SCHEMA_REGISTRY}
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "8082:8080"
+    profiles: [core]
+
+  spark-master:
+    build:
+      context: ./infra/spark
+    environment:
+      - SPARK_MODE=${SPARK_MASTER_MODE}
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_PUBLIC_DNS=localhost
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT=true
+    ports:
+      - "7077:7077"
+      - "8088:8080"
+      - "4040:4040"
+    extra_hosts:
+      - "localhost:host-gateway"
+    volumes:
+      - ./infra/airflow/processing/spark/jobs:/opt/spark/jobs
+    healthcheck:
+      test: ["CMD", "pidof", "java"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1024M
+        reservations:
+          cpus: '0.50'
+          memory: 512M
+    depends_on:
+      minio:
+        condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    profiles: [core]
+
+  spark-worker-1:
+    build:
+      context: ./infra/spark
+    environment:
+      - SPARK_MODE=${SPARK_WORKER_MODE}
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - SPARK_PUBLIC_DNS=localhost
+      - SPARK_WORKER_WEBUI_PORT=8091
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT=true
+    ports:
+      - "8091:8091"
+    extra_hosts:
+      - "localhost:host-gateway"
+    volumes:
+      - ./infra/airflow/processing/spark/jobs:/opt/spark/jobs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://spark-master:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 2048M
+        reservations:
+          cpus: '0.50'
+          memory: 1024M
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    profiles: [core]
+
+  spark-worker-2:
+    build:
+      context: ./infra/spark
+    environment:
+      - SPARK_MODE=${SPARK_WORKER_MODE}
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - SPARK_PUBLIC_DNS=localhost
+      - SPARK_WORKER_WEBUI_PORT=8092
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT=true
+    ports:
+      - "8092:8092"
+    extra_hosts:
+      - "localhost:host-gateway"
+    volumes:
+      - ./infra/airflow/processing/spark/jobs:/opt/spark/jobs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://spark-master:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 2048M
+        reservations:
+          cpus: '0.50'
+          memory: 1024M
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    profiles: [core]
+
+  redis:
+    build:
+      context: ./infra/redis
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 50
+      start_period: 30s
+    profiles: [core,airflow]
+
+  clickhouse:
+    build:
+      context: ./infra/clickhouse
+    ports:
+      - "8123:8123"
+      - "9002:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./infra/clickhouse/config.xml:/etc/clickhouse-server/config.xml
+      - ./infra/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+    environment:
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    profiles: [core]
+
+
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
+    ports:
+      - "8085:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    profiles: [airflow]
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1024M
+        reservations:
+          cpus: '0.50'
+          memory: 512M
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    profiles: [airflow]
+
+  airflow-worker:
+    <<: *airflow-common
+    command: celery worker
+    environment:
+      <<: *airflow-common-env
+      DUMB_INIT_SETSID: "0"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 2048M
+        reservations:
+          cpus: '0.75'
+          memory: 1024M
+    depends_on:
+      airflow-apiserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    profiles: [airflow]
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1024M
+        reservations:
+          cpus: '0.50'
+          memory: 512M
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    profiles: [airflow]
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1024M
+        reservations:
+          cpus: '0.50'
+          memory: 512M
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    profiles: [airflow]
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        if [[ -z "${AIRFLOW_UID}" ]]; then
+          export AIRFLOW_UID=$(id -u)
+        fi
+        mkdir -p /opt/airflow/{logs,dags,plugins}
+        chown -R "${AIRFLOW_UID}:0" /opt/airflow/
+        airflow db migrate
+        airflow users create --username ${AIRFLOW_ADMIN_USERNAME} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname ${AIRFLOW_ADMIN_FIRSTNAME} --lastname ${AIRFLOW_ADMIN_LASTNAME} --role Admin --email ${AIRFLOW_ADMIN_EMAIL}
+        airflow connections delete spark_default || true
+        airflow connections add spark_default \
+          --conn-type spark \
+          --conn-host spark://spark-master \
+          --conn-port 7077 \
+          --conn-extra '{"master":"spark://spark-master:7077","deploy_mode":"client","spark_binary":"/opt/spark/bin/spark-submit","conf":{},"env_vars":{}}'
+    environment:
+      <<: *airflow-common-env
+    user: "0:0"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    profiles: [airflow]
+
+  superset:
+    build:
+      context: ./infra/superset
+    environment:
+      - SUPERSET_SECRET_KEY=${SUPERSET_SECRET_KEY}
+      - SUPERSET_ADMIN_USERNAME=${SUPERSET_ADMIN_USERNAME}
+      - SUPERSET_ADMIN_PASSWORD=${SUPERSET_ADMIN_PASSWORD}
+      - SUPERSET_ADMIN_FIRSTNAME=${SUPERSET_ADMIN_FIRSTNAME}
+      - SUPERSET_ADMIN_LASTNAME=${SUPERSET_ADMIN_LASTNAME}
+      - SUPERSET_ADMIN_EMAIL=${SUPERSET_ADMIN_EMAIL}
+    entrypoint: ["/app/pythonpath/create_admin.sh"]
+    ports:
+      - "8089:8088"
+    volumes:
+      - ./infra/superset/provisioning:/app/provisioning
+      - ./infra/superset/create_admin.sh:/app/pythonpath/create_admin.sh
+    depends_on:
+      - trino
+    profiles: [core]
+
+  jupyterlab:
+    build:
+      context: ./infra/jupyterlab
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./spark-jobs:/home/jovyan/spark-jobs
+    environment:
+      - JUPYTER_ENABLE_LAB=${JUPYTER_ENABLE_LAB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - TRINO_URL=http://trino:8080
+      - SUPERSET_URL=http://superset:8088
+      - AIRFLOW_URL=http://airflow-apiserver:8080
+    profiles: [explore]
+
+volumes:
+  minio-data:
+  pg-data:
+  kafka-data:
+  trino-data:
+  clickhouse-data:

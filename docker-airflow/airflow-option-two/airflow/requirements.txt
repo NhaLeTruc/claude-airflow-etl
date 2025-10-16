@@ -1,0 +1,4 @@
+# requirements.txt
+apache-airflow-providers-cncf-kubernetes
+confluent-kafka
+requests
