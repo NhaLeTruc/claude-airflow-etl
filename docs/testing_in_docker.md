@@ -164,11 +164,11 @@ docker compose logs airflow-init
 ```bash
 docker compose ps
 
-# postgres-airflow and postgres-warehouse should show "healthy"
+# airflow-postgres and airflow-warehouse should show "healthy"
 
 # Check logs:
-docker compose logs postgres-warehouse
-docker compose logs postgres-airflow
+docker compose logs airflow-warehouse
+docker compose logs airflow-postgres
 ```
 
 ### Permission Errors

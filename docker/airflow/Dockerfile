@@ -15,7 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && usermod -aG 0 airflow \
+    && mkdir -p /opt/airflow/{logs,dags,plugins,data} \
+    && chown -R airflow: /opt/airflow
 
 # Switch back to airflow user
 USER airflow
@@ -29,7 +32,6 @@ RUN pip install --no-cache-dir --user -r /opt/airflow/requirements.txt
 # Set environment variables
 ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
 ENV AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
-ENV PYTHONPATH=/opt/airflow:/opt/airflow/dags:/opt/airflow/src
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5m --retries=3 \

@@ -235,8 +235,8 @@ Ensure PostgreSQL containers are healthy:
 
 ```bash
 docker-compose ps
-docker-compose logs postgres-warehouse
-docker-compose logs postgres-airflow
+docker-compose logs airflow-warehouse
+docker-compose logs airflow-postgres
 ```
 
 ## Test Development Workflow

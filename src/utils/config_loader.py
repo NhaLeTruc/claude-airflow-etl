@@ -150,7 +150,7 @@ class ConfigLoader:
             Dict with host, port, database, user, password keys
         """
         config = {
-            "host": self.get_str("WAREHOUSE_HOST", "postgres-warehouse", required=True),
+            "host": self.get_str("WAREHOUSE_HOST", "airflow-warehouse", required=True),
             "port": self.get_int("WAREHOUSE_PORT", 5432),
             "database": self.get_str("WAREHOUSE_DB", "warehouse", required=True),
             "user": self.get_str("WAREHOUSE_USER", "warehouse_user", required=True),

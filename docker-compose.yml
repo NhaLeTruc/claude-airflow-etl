@@ -5,8 +5,6 @@
 # Network: Internal bridge network for service communication
 # ============================================================================
 
-version: '3.8'
-
 x-airflow-common:
   &airflow-common
   build:
@@ -15,14 +13,14 @@ x-airflow-common:
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     # Environment variables from .env file
-    WAREHOUSE_HOST: ${WAREHOUSE_HOST:-postgres-warehouse}
+    WAREHOUSE_HOST: ${WAREHOUSE_HOST:-airflow-warehouse}
     WAREHOUSE_PORT: ${WAREHOUSE_PORT:-5432}
     WAREHOUSE_DB: ${WAREHOUSE_DB:-warehouse}
     WAREHOUSE_USER: ${WAREHOUSE_USER:-warehouse_user}
@@ -39,22 +37,21 @@ x-airflow-common:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
     - ./tests:/opt/airflow/tests
-    - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ./data:/opt/airflow/data
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
-    postgres-airflow:
+    airflow-postgres:
       condition: service_healthy
-    postgres-warehouse:
+    airflow-warehouse:
       condition: service_healthy
 
 services:
   # ============================================================================
   # PostgreSQL - Airflow Metadata Database
   # ============================================================================
-  postgres-airflow:
+  airflow-postgres:
     image: postgres:15-alpine
     container_name: airflow-postgres
     environment:
@@ -62,7 +59,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
-      - postgres-airflow-data:/var/lib/postgresql/data
+      - airflow-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -75,7 +72,7 @@ services:
   # ============================================================================
   # PostgreSQL - Mock Data Warehouse
   # ============================================================================
-  postgres-warehouse:
+  airflow-warehouse:
     build:
       context: .
       dockerfile: docker/warehouse/Dockerfile
@@ -85,7 +82,7 @@ services:
       POSTGRES_PASSWORD: warehouse_pass
       POSTGRES_DB: warehouse
     volumes:
-      - postgres-warehouse-data:/var/lib/postgresql/data
+      - airflow-warehouse-data:/var/lib/postgresql/data
       - ./src/warehouse/migrations:/migrations
     ports:
       - "5433:5432"
@@ -108,7 +105,6 @@ services:
     command:
       - -c
       - |
-        mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins /opt/airflow/data
         airflow db migrate
         airflow users create \
           --username admin \
@@ -124,9 +120,11 @@ services:
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
-    user: "0:0"
+    user: "airflow:0"
     depends_on:
       <<: *airflow-common-depends-on
+    networks:
+      - airflow-network
 
   # ============================================================================
   # Airflow - Webserver
@@ -174,9 +172,9 @@ services:
 # Volumes
 # ============================================================================
 volumes:
-  postgres-airflow-data:
+  airflow-postgres-data:
     name: airflow-postgres-data
-  postgres-warehouse-data:
+  airflow-warehouse-data:
     name: airflow-warehouse-data
 
 # ============================================================================

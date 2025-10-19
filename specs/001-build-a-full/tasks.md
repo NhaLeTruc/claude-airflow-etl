@@ -52,7 +52,7 @@
 
 - [x] T015 Create Dockerfile for Airflow in docker/airflow/Dockerfile (extends apache/airflow:2.8-python3.11, installs custom dependencies)
 - [x] T016 Create Dockerfile for PostgreSQL warehouse in docker/warehouse/Dockerfile (initializes with schema and seed data)
-- [x] T017 Create docker-compose.yml with services (airflow-webserver, airflow-scheduler, airflow-init, postgres-warehouse, postgres-airflow)
+- [x] T017 Create docker-compose.yml with services (airflow-webserver, airflow-scheduler, airflow-init, airflow-warehouse, airflow-postgres)
 - [x] T018 Configure volume mounts in docker-compose.yml for dags/, src/, tests/, and database persistence
 - [x] T019 Configure health checks for all services in docker-compose.yml (ensure startup order and readiness)
 

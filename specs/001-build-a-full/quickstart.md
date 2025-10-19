@@ -55,7 +55,7 @@ docker-compose ps
 NAME                    STATUS          PORTS
 airflow-webserver       Up (healthy)    0.0.0.0:8080->8080/tcp
 airflow-scheduler       Up (healthy)
-postgres-warehouse      Up (healthy)    0.0.0.0:5432->5432/tcp
+airflow-warehouse      Up (healthy)    0.0.0.0:5432->5432/tcp
 ```
 
 ### Step 3: Access Airflow UI
@@ -121,7 +121,7 @@ docker-compose ps
 # View logs for troubleshooting
 docker-compose logs airflow-webserver
 docker-compose logs airflow-scheduler
-docker-compose logs postgres-warehouse
+docker-compose logs airflow-warehouse
 
 # Check Airflow scheduler is processing DAGs
 docker-compose logs -f airflow-scheduler | grep "DAG bag size"
@@ -145,7 +145,7 @@ The mock data warehouse is automatically initialized on first startup with:
 
 ```bash
 # Connect to warehouse database
-docker exec -it postgres-warehouse psql -U warehouse_user -d warehouse
+docker exec -it airflow-warehouse psql -U warehouse_user -d warehouse
 
 # Check table counts
 SELECT 'customers' as table_name, COUNT(*) FROM warehouse.dim_customer
@@ -384,7 +384,7 @@ docker-compose logs -f airflow-scheduler
 
 ```bash
 # Query quality check history
-docker exec postgres-warehouse psql -U warehouse_user -d warehouse -c "
+docker exec airflow-warehouse psql -U warehouse_user -d warehouse -c "
 SELECT
     dag_id,
     task_id,
@@ -403,7 +403,7 @@ LIMIT 10;
 
 ```bash
 # View Spark job submission history
-docker exec postgres-warehouse psql -U warehouse_user -d warehouse -c "
+docker exec airflow-warehouse psql -U warehouse_user -d warehouse -c "
 SELECT
     dag_id,
     cluster_type,
@@ -553,7 +553,7 @@ docker-compose restart airflow-scheduler
 # Create missing connection via CLI
 docker exec airflow-scheduler airflow connections add warehouse \
     --conn-type postgres \
-    --conn-host postgres-warehouse \
+    --conn-host airflow-warehouse \
     --conn-login warehouse_user \
     --conn-password warehouse_pass \
     --conn-schema warehouse \

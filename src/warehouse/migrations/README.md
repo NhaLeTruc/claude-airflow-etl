@@ -20,7 +20,7 @@ To run migrations manually:
 
 ```bash
 # Connect to warehouse database
-docker exec -it postgres-warehouse psql -U warehouse_user -d warehouse
+docker exec -it airflow-warehouse psql -U warehouse_user -d warehouse
 
 # Run specific migration
 \i /docker-entrypoint-initdb.d/migrations/001_initial_schema.sql

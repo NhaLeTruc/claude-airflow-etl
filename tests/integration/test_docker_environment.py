@@ -37,8 +37,8 @@ class TestDockerEnvironment:
         services = compose_config.get("services", {})
 
         required_services = [
-            "postgres-airflow",
-            "postgres-warehouse",
+            "airflow-postgres",
+            "airflow-warehouse",
             "airflow-init",
             "airflow-webserver",
             "airflow-scheduler",
@@ -57,7 +57,7 @@ class TestDockerEnvironment:
         services = compose_config.get("services", {})
 
         # Services that should have health checks
-        health_check_services = ["postgres-airflow", "postgres-warehouse"]
+        health_check_services = ["airflow-postgres", "airflow-warehouse"]
 
         for service_name in health_check_services:
             service = services.get(service_name, {})
@@ -134,7 +134,7 @@ class TestDockerEnvironment:
         services = compose_config.get("services", {})
 
         # Warehouse should expose port 5433
-        warehouse = services.get("postgres-warehouse", {})
+        warehouse = services.get("airflow-warehouse", {})
         ports = warehouse.get("ports", [])
 
         # Check if 5433 is exposed
@@ -179,7 +179,7 @@ class TestDockerEnvironment:
         volumes = compose_config.get("volumes", {})
 
         # Should have volumes for postgres data
-        expected_volumes = ["postgres-airflow-data", "postgres-warehouse-data"]
+        expected_volumes = ["airflow-postgres-data", "airflow-warehouse-data"]
 
         for volume_name in expected_volumes:
             assert volume_name in volumes, f"Volume '{volume_name}' should be defined"
@@ -195,8 +195,8 @@ class TestDockerEnvironment:
     @pytest.mark.parametrize(
         "service_name",
         [
-            "postgres-airflow",
-            "postgres-warehouse",
+            "airflow-postgres",
+            "airflow-warehouse",
             "airflow-init",
             "airflow-webserver",
             "airflow-scheduler",

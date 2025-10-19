@@ -45,10 +45,10 @@ cd apache-airflow-etl-demo
 cp .env.example .env
 
 # Start the entire stack (Airflow, PostgreSQL warehouse, Spark)
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to be healthy (~2-3 minutes)
-docker-compose ps
+docker compose ps
 ```
 
 ### Access Airflow UI
