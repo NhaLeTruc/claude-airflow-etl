@@ -162,11 +162,11 @@
 
 ### Tests for User Story 3 (TDD: Write tests FIRST) ⚠️
 
-- [ ] T060 [P] [US3] Unit test for Spark hook in tests/unit/test_hooks/test_spark_hook.py (test job submission, status polling, log retrieval)
-- [ ] T061 [P] [US3] Unit test for Spark Standalone operator in tests/unit/test_operators/test_spark_standalone.py (test parameter validation, job submission, error handling)
-- [ ] T062 [P] [US3] Unit test for Spark YARN operator in tests/unit/test_operators/test_spark_yarn.py (test YARN-specific config, queue selection, resource allocation)
-- [ ] T063 [P] [US3] Unit test for Spark Kubernetes operator in tests/unit/test_operators/test_spark_kubernetes.py (test K8s namespace, pod creation, cleanup)
-- [ ] T064 [P] [US3] Integration test for Spark job execution in tests/integration/test_spark_execution.py (test job submission to mocked clusters, status tracking, completion)
+- [x] T060 [P] [US3] Unit test for Spark hook in tests/unit/test_hooks/test_spark_hook.py (test job submission, status polling, log retrieval)
+- [x] T061 [P] [US3] Unit test for Spark Standalone operator in tests/unit/test_operators/test_spark_standalone.py (test parameter validation, job submission, error handling)
+- [x] T062 [P] [US3] Unit test for Spark YARN operator in tests/unit/test_operators/test_spark_yarn.py (test YARN-specific config, queue selection, resource allocation)
+- [x] T063 [P] [US3] Unit test for Spark Kubernetes operator in tests/unit/test_operators/test_spark_kubernetes.py (test K8s namespace, pod creation, cleanup)
+- [x] T064 [P] [US3] Integration test for Spark job execution in tests/integration/test_spark_execution.py (test job submission to mocked clusters, status tracking, completion)
 
 ### Implementation for User Story 3
 
