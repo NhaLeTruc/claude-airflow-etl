@@ -1177,10 +1177,441 @@ k8s_task = SparkKubernetesOperator(
 - Enable compression
 - Review execution plan in Spark UI
 
+---
+
+## Multi-Channel Notification Operators
+
+The platform provides custom operators for sending notifications via email, Microsoft Teams, and Telegram with support for template rendering, retry logic, and error handling.
+
+### Email Notifications
+
+Send email notifications via SMTP with HTML/plain text support.
+
+**Operator**: `EmailNotificationOperator`
+
+**Basic Usage**:
+
+```python
+from src.operators.notifications.email_operator import EmailNotificationOperator
+
+send_email = EmailNotificationOperator(
+    task_id="send_success_email",
+    to="admin@example.com",
+    subject="Pipeline {{ dag.dag_id }} completed",
+    message_template="""
+    Pipeline execution completed successfully!
+
+    DAG: {{ dag.dag_id }}
+    Date: {{ ds }}
+    Run ID: {{ run_id }}
+    """,
+    smtp_host="smtp.gmail.com",
+    smtp_port=587,
+    smtp_user="{{ var.value.smtp_user }}",
+    smtp_password="{{ var.value.smtp_password }}",
+)
+```
+
+**Parameters**:
+
+- `to` (str | list): Recipient email address(es)
+- `subject` (str): Email subject (supports Jinja2 templates)
+- `message_template` (str): Email body (supports Jinja2 templates)
+- `from_email` (str, optional): Sender email address
+- `cc` (str | list, optional): CC recipients
+- `bcc` (str | list, optional): BCC recipients
+- `html` (bool): Send as HTML email (default: False)
+- `smtp_host` (str): SMTP server hostname
+- `smtp_port` (int): SMTP port (default: 587 for TLS)
+- `smtp_user` (str, optional): SMTP authentication username
+- `smtp_password` (str, optional): SMTP authentication password
+- `use_ssl` (bool): Use SSL instead of TLS for port 465 (default: False)
+
+**HTML Email Example**:
+
+```python
+send_html_email = EmailNotificationOperator(
+    task_id="send_html_report",
+    to=["team@example.com", "manager@example.com"],
+    subject="Daily Report - {{ ds }}",
+    message_template="""
+    <html>
+    <body>
+        <h1>Daily Pipeline Report</h1>
+        <p><strong>DAG:</strong> {{ dag.dag_id }}</p>
+        <p><strong>Date:</strong> {{ ds }}</p>
+        <p><strong>Status:</strong> <span style="color: green;">SUCCESS</span></p>
+    </body>
+    </html>
+    """,
+    html=True,
+    smtp_host="smtp.gmail.com",
+    smtp_port=587,
+)
+```
+
+**Email Validation**:
+- All email addresses are validated for correct format
+- Invalid emails will raise `ValueError` during DAG parsing
+
+### Microsoft Teams Notifications
+
+Send rich message cards to Microsoft Teams channels via incoming webhooks.
+
+**Operator**: `TeamsNotificationOperator`
+
+**Basic Usage**:
+
+```python
+from src.operators.notifications.teams_operator import TeamsNotificationOperator
+
+send_teams = TeamsNotificationOperator(
+    task_id="send_teams_notification",
+    webhook_url="{{ var.value.teams_webhook_url }}",
+    message_template="Pipeline {{ dag.dag_id }} completed successfully!",
+    title="✅ Pipeline Success",
+    theme_color="00FF00",  # Green
+)
+```
+
+**Parameters**:
+
+- `webhook_url` (str): Teams incoming webhook URL (must start with https://)
+- `message_template` (str): Message text (supports Jinja2 templates and Markdown)
+- `title` (str, optional): Message card title (default: "Airflow Notification")
+- `theme_color` (str, optional): Hex color code without # (default: "0078D4")
+- `facts` (list, optional): List of key-value pairs for facts section
+- `actions` (list, optional): List of action buttons with URIs
+- `timeout` (int): Request timeout in seconds (default: 30)
+
+**Advanced Example with Facts and Actions**:
+
+```python
+send_teams_detailed = TeamsNotificationOperator(
+    task_id="send_teams_detailed",
+    webhook_url="{{ var.value.teams_webhook_url }}",
+    message_template="""
+    Pipeline execution completed successfully.
+
+    **Summary:**
+    - All quality checks passed
+    - 10,000 records processed
+    - Duration: 5 minutes
+    """,
+    title="📊 {{ dag.dag_id }} - Success",
+    theme_color="00FF00",
+    facts=[
+        {"name": "DAG ID", "value": "{{ dag.dag_id }}"},
+        {"name": "Execution Date", "value": "{{ ds }}"},
+        {"name": "Duration", "value": "{{ (task_instance.end_date - task_instance.start_date).total_seconds() if task_instance.end_date else 'N/A' }}s"},
+        {"name": "State", "value": "{{ task_instance.state|upper }}"},
+    ],
+    actions=[
+        {
+            "@type": "OpenUri",
+            "name": "View in Airflow",
+            "targets": [{"os": "default", "uri": "http://localhost:8080/dags/{{ dag.dag_id }}"}]
+        }
+    ],
+)
+```
+
+**Theme Colors**:
+- Success: `00FF00` (Green)
+- Warning: `FFA500` (Orange)
+- Error: `FF0000` (Red)
+- Info: `0078D4` (Microsoft Blue)
+
+### Telegram Notifications
+
+Send notifications via Telegram Bot API with Markdown/HTML formatting support.
+
+**Operator**: `TelegramNotificationOperator`
+
+**Basic Usage**:
+
+```python
+from src.operators.notifications.telegram_operator import TelegramNotificationOperator
+
+send_telegram = TelegramNotificationOperator(
+    task_id="send_telegram_notification",
+    bot_token="{{ var.value.telegram_bot_token }}",
+    chat_id="{{ var.value.telegram_chat_id }}",
+    message_template="Pipeline *{{ dag.dag_id }}* completed!",
+    parse_mode="Markdown",
+)
+```
+
+**Parameters**:
+
+- `bot_token` (str): Telegram Bot API token (format: "123456:ABC-DEF...")
+- `chat_id` (str): Telegram chat ID (user ID or group chat ID with -)
+- `message_template` (str): Message text (supports Jinja2 templates)
+- `parse_mode` (str, optional): "Markdown", "HTML", or None
+- `disable_notification` (bool): Send silently without sound (default: False)
+- `disable_web_page_preview` (bool): Disable link previews (default: False)
+- `timeout` (int): Request timeout in seconds (default: 30)
+
+**Markdown Formatting Example**:
+
+```python
+send_telegram_markdown = TelegramNotificationOperator(
+    task_id="send_telegram_markdown",
+    bot_token="{{ var.value.telegram_bot_token }}",
+    chat_id="{{ var.value.telegram_chat_id }}",
+    message_template="""
+*Pipeline Success* ✅
+
+*DAG:* `{{ dag.dag_id }}`
+*Date:* {{ ds }}
+*Run ID:* `{{ run_id }}`
+
+_All tasks completed successfully!_
+    """,
+    parse_mode="Markdown",
+)
+```
+
+**HTML Formatting Example**:
+
+```python
+send_telegram_html = TelegramNotificationOperator(
+    task_id="send_telegram_html",
+    bot_token="{{ var.value.telegram_bot_token }}",
+    chat_id="{{ var.value.telegram_chat_id }}",
+    message_template="""
+<b>Pipeline Failure</b> ❌
+
+<b>DAG:</b> <code>{{ dag.dag_id }}</code>
+<b>Task:</b> <code>{{ task.task_id }}</code>
+<b>Error:</b> <i>{{ exception if exception is defined else 'Unknown error' }}</i>
+
+<a href="http://localhost:8080/dags/{{ dag.dag_id }}">View in Airflow</a>
+    """,
+    parse_mode="HTML",
+)
+```
+
+**Silent Notification** (for non-critical alerts):
+
+```python
+send_telegram_silent = TelegramNotificationOperator(
+    task_id="send_telegram_silent",
+    bot_token="{{ var.value.telegram_bot_token }}",
+    chat_id="{{ var.value.telegram_chat_id }}",
+    message_template="Background job completed.",
+    disable_notification=True,  # No sound
+)
+```
+
+### Notification Templates
+
+Use pre-defined templates for common scenarios.
+
+**Available Templates**:
+
+```python
+from src.utils.notification_templates import get_template, NOTIFICATION_TEMPLATES
+
+# Success templates
+success_simple = get_template("success", "simple")
+success_detailed = get_template("success", "detailed")
+
+# Failure templates
+failure_simple = get_template("failure", "simple")
+failure_detailed = get_template("failure", "detailed")
+
+# Data quality templates
+data_quality_warning = get_template("data_quality", "warning")
+data_quality_critical = get_template("data_quality", "critical")
+
+# Spark job templates
+spark_success = get_template("spark", "success")
+spark_failure = get_template("spark", "failure")
+```
+
+**Using Templates in Operators**:
+
+```python
+send_success_email = EmailNotificationOperator(
+    task_id="send_success_email",
+    to="admin@example.com",
+    subject="Pipeline Success - {{ dag.dag_id }}",
+    message_template=get_template("success", "detailed"),
+    smtp_host="smtp.gmail.com",
+    smtp_port=587,
+)
+```
+
+### Common Patterns
+
+#### Success Notification
+
+```python
+# Send notification on successful DAG run
+send_success_notification = EmailNotificationOperator(
+    task_id="send_success_notification",
+    to="team@example.com",
+    subject="✅ {{ dag.dag_id }} - Success",
+    message_template=get_template("success", "detailed"),
+    trigger_rule="all_success",  # Only run if all upstream tasks succeed
+)
+
+# Place at end of DAG
+all_tasks >> send_success_notification
+```
+
+#### Failure Notification
+
+```python
+# Send notification on any task failure
+send_failure_notification = TeamsNotificationOperator(
+    task_id="send_failure_notification",
+    webhook_url="{{ var.value.teams_webhook_url }}",
+    message_template=get_template("failure", "detailed"),
+    title="❌ {{ dag.dag_id }} - Failed",
+    theme_color="FF0000",  # Red
+    trigger_rule="one_failed",  # Run if any upstream task fails
+)
+
+# Add as final task with trigger_rule
+all_tasks >> send_failure_notification
+```
+
+#### Multi-Channel Notifications
+
+```python
+# Send to all channels in parallel
+from airflow.operators.python import BranchPythonOperator
+
+send_email = EmailNotificationOperator(...)
+send_teams = TeamsNotificationOperator(...)
+send_telegram = TelegramNotificationOperator(...)
+
+# All notifications run in parallel after task completes
+task >> [send_email, send_teams, send_telegram]
+```
+
+#### Conditional Notifications
+
+```python
+# Only send if threshold exceeded
+def check_threshold(**context):
+    ti = context['task_instance']
+    count = ti.xcom_pull(task_ids='count_records')
+    if count > 1000:
+        return 'send_notification'
+    else:
+        return 'skip_notification'
+
+check = BranchPythonOperator(
+    task_id='check_threshold',
+    python_callable=check_threshold,
+)
+
+send_notification = TelegramNotificationOperator(
+    task_id='send_notification',
+    bot_token="{{ var.value.telegram_bot_token }}",
+    chat_id="{{ var.value.telegram_chat_id }}",
+    message_template="High record count detected: {{ ti.xcom_pull('count_records') }}",
+)
+
+count_records >> check >> send_notification
+```
+
+### Configuration
+
+Store sensitive credentials in Airflow Variables:
+
+**Via Airflow UI**:
+Admin → Variables → Add
+
+**Via CLI**:
+
+```bash
+# Email
+airflow variables set smtp_host "smtp.gmail.com"
+airflow variables set smtp_user "notifications@company.com"
+airflow variables set smtp_password "app-specific-password"
+
+# Teams
+airflow variables set teams_webhook_url "https://outlook.office.com/webhook/abc123..."
+
+# Telegram
+airflow variables set telegram_bot_token "123456:ABC-DEF..."
+airflow variables set telegram_chat_id "-1001234567890"
+```
+
+### Error Handling
+
+All notification operators include:
+- **Automatic retries** with configurable delays
+- **Timeout enforcement** to prevent hanging
+- **Structured error logging** with full context
+- **Graceful degradation** (logs errors without failing DAG)
+
+**Retry Configuration**:
+
+```python
+send_email = EmailNotificationOperator(
+    task_id="send_email",
+    to="admin@example.com",
+    subject="Test",
+    message_template="Test message",
+    retries=3,
+    retry_delay=timedelta(minutes=2),
+    retry_exponential_backoff=True,  # 2min → 4min → 8min
+)
+```
+
+### Best Practices
+
+1. **Use Airflow Variables for credentials** (never hardcode)
+2. **Set appropriate trigger rules** (`all_success`, `one_failed`, `all_done`)
+3. **Keep messages concise** (especially for Telegram - 4096 char limit)
+4. **Use templates** for consistent messaging
+5. **Test notifications** with dummy values first
+6. **Add retries** for transient network errors
+7. **Set timeouts** to prevent hanging tasks
+8. **Include context** in messages (DAG ID, date, run ID)
+9. **Use appropriate severity colors** (green for success, red for failure)
+10. **Monitor notification delivery** in task logs
+
+### Troubleshooting
+
+**Email not sending**:
+- Check SMTP credentials and host
+- Verify port (587 for TLS, 465 for SSL)
+- Check firewall/network rules
+- Enable "less secure apps" for Gmail (or use app password)
+- Review task logs for specific errors
+
+**Teams notification fails**:
+- Verify webhook URL is correct
+- Check webhook has not been deleted in Teams
+- Ensure message card JSON is valid
+- Review HTTP response code in logs
+
+**Telegram notification fails**:
+- Verify bot token format (contains colon)
+- Check chat ID is correct
+- Ensure bot has been added to group (for group chats)
+- Check message length < 4096 characters
+- Review Telegram API error codes in logs
+
+**Template rendering errors**:
+- Check Jinja2 syntax (proper `{{ }}` usage)
+- Verify context variables exist
+- Test templates with simple values first
+- Review template error messages in logs
+
 ## Additional Resources
 
 - [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
 - [Spark Configuration Reference](https://spark.apache.org/docs/latest/configuration.html)
 - [Spark on Kubernetes Guide](https://spark.apache.org/docs/latest/running-on-kubernetes.html)
+- [Microsoft Teams Webhooks](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook)
+- [Telegram Bot API](https://core.telegram.org/bots/api)
 - [Development Guide](./development.md)
 - [Docker Spark Setup](../docker/spark/README.md)
+- [Example DAG: Notification Basics](../dags/examples/beginner/demo_notification_basics_v1.py)

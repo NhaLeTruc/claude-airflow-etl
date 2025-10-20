@@ -22,6 +22,16 @@ try:
 except ImportError:
     SPARK_OPERATORS_AVAILABLE = False
 
+# Import custom notification operators
+try:
+    from src.operators.notifications.email_operator import EmailNotificationOperator
+    from src.operators.notifications.teams_operator import TeamsNotificationOperator
+    from src.operators.notifications.telegram_operator import TelegramNotificationOperator
+
+    NOTIFICATION_OPERATORS_AVAILABLE = True
+except ImportError:
+    NOTIFICATION_OPERATORS_AVAILABLE = False
+
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -74,6 +84,17 @@ class OperatorRegistry:
                 }
             )
             logger.debug("Spark operators registered", count=3)
+
+        # Register notification operators if available
+        if NOTIFICATION_OPERATORS_AVAILABLE:
+            custom_operators.update(
+                {
+                    "EmailNotificationOperator": EmailNotificationOperator,
+                    "TeamsNotificationOperator": TeamsNotificationOperator,
+                    "TelegramNotificationOperator": TelegramNotificationOperator,
+                }
+            )
+            logger.debug("Notification operators registered", count=3)
 
         # Register custom operators
         for name, operator_class in custom_operators.items():

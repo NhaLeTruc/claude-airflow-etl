@@ -194,22 +194,22 @@
 
 ### Tests for User Story 4 (TDD: Write tests FIRST) ⚠️
 
-- [ ] T076 [P] [US4] Unit test for base notification operator in tests/unit/test_operators/test_base_notification.py (test retry logic, error handling, fallback mechanisms)
-- [ ] T077 [P] [US4] Unit test for email operator in tests/unit/test_operators/test_email_notification.py (test SMTP connection, template rendering, recipient validation)
-- [ ] T078 [P] [US4] Unit test for Teams operator in tests/unit/test_operators/test_teams_notification.py (test webhook POST, message card formatting, error handling)
-- [ ] T079 [P] [US4] Unit test for Telegram operator in tests/unit/test_operators/test_telegram_notification.py (test bot API, message formatting, chat ID validation)
-- [ ] T080 [P] [US4] Integration test for notification delivery in tests/integration/test_notification_delivery.py (test messages sent to mock endpoints, correct content)
+- [X] T076 [P] [US4] Unit test for base notification operator in tests/unit/test_operators/test_base_notification.py (test retry logic, error handling, fallback mechanisms)
+- [X] T077 [P] [US4] Unit test for email operator in tests/unit/test_operators/test_email_notification.py (test SMTP connection, template rendering, recipient validation)
+- [X] T078 [P] [US4] Unit test for Teams operator in tests/unit/test_operators/test_teams_notification.py (test webhook POST, message card formatting, error handling)
+- [X] T079 [P] [US4] Unit test for Telegram operator in tests/unit/test_operators/test_telegram_notification.py (test bot API, message formatting, chat ID validation)
+- [X] T080 [P] [US4] Integration test for notification delivery in tests/integration/test_notification_delivery.py (test messages sent to mock endpoints, correct content)
 
 ### Implementation for User Story 4
 
-- [ ] T081 [US4] Implement base notification operator in src/operators/notifications/base_notification.py (retry logic, timeout, template rendering with Jinja2, error logging)
-- [ ] T082 [US4] Implement email notification operator in src/operators/notifications/email_operator.py (SMTP connection, HTML/plain text support, attachment handling)
-- [ ] T083 [US4] Implement MS Teams notification operator in src/operators/notifications/teams_operator.py (webhook POST, message card builder, theme color support, facts/actions)
-- [ ] T084 [US4] Implement Telegram notification operator in src/operators/notifications/telegram_operator.py (bot API integration, markdown/HTML parsing, silent notification option)
-- [ ] T085 [P] [US4] Create notification message templates in src/utils/notification_templates.py (success, failure, data quality alert templates with Jinja2)
-- [ ] T086 [US4] Register notification operators in operator registry in dags/factory/operator_registry.py
-- [ ] T087 [US4] Create example DAG demonstrating notifications in dags/examples/beginner/demo_notification_basics_v1.py (email on success, Teams on failure)
-- [ ] T088 [P] [US4] Document notification operator configuration and templating in docs/operator_guide.md
+- [X] T081 [US4] Implement base notification operator in src/operators/notifications/base_notification.py (retry logic, timeout, template rendering with Jinja2, error logging)
+- [X] T082 [US4] Implement email notification operator in src/operators/notifications/email_operator.py (SMTP connection, HTML/plain text support, attachment handling)
+- [X] T083 [US4] Implement MS Teams notification operator in src/operators/notifications/teams_operator.py (webhook POST, message card builder, theme color support, facts/actions)
+- [X] T084 [US4] Implement Telegram notification operator in src/operators/notifications/telegram_operator.py (bot API integration, markdown/HTML parsing, silent notification option)
+- [X] T085 [P] [US4] Create notification message templates in src/utils/notification_templates.py (success, failure, data quality alert templates with Jinja2)
+- [X] T086 [US4] Register notification operators in operator registry in dags/factory/operator_registry.py
+- [X] T087 [US4] Create example DAG demonstrating notifications in dags/examples/beginner/demo_notification_basics_v1.py (email on success, Teams on failure)
+- [X] T088 [P] [US4] Document notification operator configuration and templating in docs/operator_guide.md
 
 **Checkpoint**: Multi-channel notifications working with proper error handling
 
