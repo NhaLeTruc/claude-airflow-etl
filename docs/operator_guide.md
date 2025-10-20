@@ -640,3 +640,547 @@ For more information, see:
 - [Airflow Documentation - Error Handling](https://airflow.apache.org/docs/apache-airflow/stable/concepts/tasks.html#error-handling)
 - [Development Guide](./development.md)
 - [Testing Guide](../TESTING.md)
+
+---
+
+# Spark Operators Guide
+
+Complete guide to using custom Spark operators for multi-cluster job orchestration.
+
+## Overview
+
+The platform provides three custom Spark operators for submitting and monitoring Spark jobs across different cluster types:
+
+- **SparkStandaloneOperator**: Submits jobs to Spark Standalone clusters
+- **SparkYarnOperator**: Submits jobs to Hadoop YARN clusters
+- **SparkKubernetesOperator**: Submits jobs to Kubernetes clusters
+
+All operators share common functionality:
+- Job submission and tracking
+- Status monitoring
+- Log retrieval
+- Graceful cancellation
+- Resource configuration
+
+## Spark Standalone Operator
+
+### Use Case
+
+Best for local development, testing, and small-scale processing.
+
+### Configuration
+
+```python
+from src.operators.spark.standalone_operator import SparkStandaloneOperator
+
+spark_task = SparkStandaloneOperator(
+    task_id='process_data',
+    application='/opt/spark/apps/my_app.py',
+    master='spark://spark-master:7077',
+    name='MySparkJob',
+    deploy_mode='client',  # or 'cluster'
+    
+    # Resource configuration
+    driver_memory='1g',
+    driver_cores='1',
+    executor_memory='2g',
+    executor_cores='2',
+    num_executors='3',
+    
+    # Spark configuration
+    conf={
+        'spark.executor.memory': '2g',
+        'spark.sql.shuffle.partitions': '10',
+    },
+    
+    # Application arguments
+    application_args=['--input', '/data/input', '--output', '/data/output'],
+    
+    # Airflow connection
+    conn_id='spark_standalone',
+    
+    dag=dag,
+)
+```
+
+### Parameters
+
+- **application** (required): Path to Spark application (.py or .jar)
+- **master** (required): Spark master URL (e.g., `spark://host:7077`)
+- **deploy_mode**: `client` (default) or `cluster`
+- **name**: Application name (visible in Spark UI)
+- **conf**: Dict of Spark configuration properties
+- **application_args**: List of arguments to pass to application
+- **driver_memory**: Driver memory (e.g., '1g', '512m')
+- **driver_cores**: Number of driver cores
+- **executor_memory**: Executor memory
+- **executor_cores**: Number of cores per executor
+- **num_executors**: Number of executor instances
+- **verbose**: Enable verbose spark-submit output
+- **conn_id**: Airflow connection ID
+
+### Example
+
+```python
+word_count = SparkStandaloneOperator(
+    task_id='word_count',
+    application='/opt/spark/apps/word_count.py',
+    master='spark://spark-master:7077',
+    name='WordCount',
+    executor_memory='1g',
+    executor_cores='1',
+    num_executors='2',
+    dag=dag,
+)
+```
+
+## Spark YARN Operator
+
+### Use Case
+
+Best for large-scale production workloads in Hadoop ecosystems.
+
+### Configuration
+
+```python
+from src.operators.spark.yarn_operator import SparkYarnOperator
+
+yarn_task = SparkYarnOperator(
+    task_id='process_large_dataset',
+    application='/apps/sales_aggregation.py',
+    queue='production',  # YARN queue name
+    deploy_mode='cluster',  # Recommended for YARN
+    
+    # Resource configuration
+    driver_memory='2g',
+    driver_cores='2',
+    executor_memory='4g',
+    executor_cores='4',
+    num_executors='10',
+    
+    # YARN-specific configuration
+    conf={
+        'spark.yarn.queue': 'production',
+        'spark.yarn.maxAppAttempts': '3',
+        'spark.dynamicAllocation.enabled': 'true',
+        'spark.dynamicAllocation.minExecutors': '2',
+        'spark.dynamicAllocation.maxExecutors': '20',
+    },
+    
+    application_args=['--input', 'hdfs:///data/sales'],
+    conn_id='spark_yarn',
+    dag=dag,
+)
+```
+
+### YARN-Specific Parameters
+
+- **queue** (required): YARN queue name (default: 'default')
+- **deploy_mode**: Use 'cluster' for production workloads
+
+### Dynamic Resource Allocation
+
+Enable dynamic allocation for variable workloads:
+
+```python
+conf={
+    'spark.dynamicAllocation.enabled': 'true',
+    'spark.dynamicAllocation.minExecutors': '2',
+    'spark.dynamicAllocation.maxExecutors': '50',
+    'spark.dynamicAllocation.initialExecutors': '5',
+}
+```
+
+## Spark Kubernetes Operator
+
+### Use Case
+
+Best for cloud-native deployments and containerized workflows.
+
+### Configuration
+
+```python
+from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
+
+k8s_task = SparkKubernetesOperator(
+    task_id='process_on_k8s',
+    application='/opt/spark/apps/my_app.py',
+    namespace='spark-jobs',  # K8s namespace
+    kubernetes_service_account='spark-sa',
+    image='my-registry.io/spark:3.5.0-custom',
+    
+    # Resource requests and limits
+    conf={
+        'spark.kubernetes.driver.request.cores': '1',
+        'spark.kubernetes.driver.limit.cores': '2',
+        'spark.kubernetes.driver.request.memory': '2g',
+        'spark.kubernetes.executor.request.cores': '2',
+        'spark.kubernetes.executor.limit.cores': '4',
+        'spark.kubernetes.executor.request.memory': '4g',
+    },
+    
+    # Pod cleanup
+    executor_pod_cleanup_policy='OnSuccess',  # or 'OnFailure', 'Never'
+    
+    application_args=['--mode', 'production'],
+    conn_id='spark_k8s',
+    dag=dag,
+)
+```
+
+### Kubernetes-Specific Parameters
+
+- **namespace** (required): Kubernetes namespace for Spark resources
+- **kubernetes_service_account**: Service account for driver/executor pods
+- **image**: Docker image for Spark containers
+- **driver_pod_template**: Path to driver pod template YAML
+- **executor_pod_template**: Path to executor pod template YAML
+- **executor_pod_cleanup_policy**: 'OnSuccess', 'OnFailure', or 'Never'
+
+### Pod Templates
+
+Use pod templates for advanced configuration:
+
+```python
+k8s_task = SparkKubernetesOperator(
+    task_id='custom_pods',
+    application='/apps/my_app.py',
+    namespace='spark-jobs',
+    driver_pod_template='/config/driver-template.yaml',
+    executor_pod_template='/config/executor-template.yaml',
+    dag=dag,
+)
+```
+
+## Common Patterns
+
+### 1. Job Chaining
+
+Run multiple Spark jobs in sequence:
+
+```python
+job1 = SparkStandaloneOperator(
+    task_id='extract_data',
+    application='/apps/extract.py',
+    master='spark://master:7077',
+    dag=dag,
+)
+
+job2 = SparkStandaloneOperator(
+    task_id='transform_data',
+    application='/apps/transform.py',
+    master='spark://master:7077',
+    dag=dag,
+)
+
+job1 >> job2
+```
+
+### 2. Parallel Processing
+
+Run independent jobs in parallel:
+
+```python
+jobs = []
+for region in ['us-east', 'us-west', 'eu']:
+    job = SparkStandaloneOperator(
+        task_id=f'process_{region}',
+        application='/apps/process_region.py',
+        application_args=['--region', region],
+        master='spark://master:7077',
+        dag=dag,
+    )
+    jobs.append(job)
+
+start >> jobs >> aggregate
+```
+
+### 3. Multi-Cluster Deployment
+
+Use different clusters for different workloads:
+
+```python
+# Development: Standalone
+dev_job = SparkStandaloneOperator(
+    task_id='dev_job',
+    application='/apps/test.py',
+    master='spark://dev-master:7077',
+    dag=dag,
+)
+
+# Production: YARN
+prod_job = SparkYarnOperator(
+    task_id='prod_job',
+    application='/apps/production.py',
+    queue='production',
+    deploy_mode='cluster',
+    dag=dag,
+)
+```
+
+### 4. Resource Tuning
+
+Adjust resources based on data volume:
+
+```python
+# Small dataset
+small_job = SparkStandaloneOperator(
+    task_id='small_processing',
+    application='/apps/process.py',
+    executor_memory='1g',
+    executor_cores='1',
+    num_executors='2',
+    dag=dag,
+)
+
+# Large dataset
+large_job = SparkStandaloneOperator(
+    task_id='large_processing',
+    application='/apps/process.py',
+    executor_memory='8g',
+    executor_cores='4',
+    num_executors='20',
+    conf={'spark.sql.shuffle.partitions': '200'},
+    dag=dag,
+)
+```
+
+## Error Handling
+
+### Retry Configuration
+
+Combine with retry policies:
+
+```python
+from src.utils.retry_policies import create_retry_config
+
+retry_config = create_retry_config(
+    max_retries=2,
+    strategy='exponential',
+    base_delay=120,
+)
+
+spark_job = SparkStandaloneOperator(
+    task_id='resilient_job',
+    application='/apps/my_app.py',
+    master='spark://master:7077',
+    retries=retry_config['retries'],
+    retry_delay=retry_config['retry_delay'],
+    dag=dag,
+)
+```
+
+### Timeout Management
+
+Set execution timeout:
+
+```python
+from datetime import timedelta
+
+spark_job = SparkStandaloneOperator(
+    task_id='long_job',
+    application='/apps/batch_process.py',
+    master='spark://master:7077',
+    execution_timeout=timedelta(hours=2),
+    dag=dag,
+)
+```
+
+### Failure Handling
+
+Use trigger rules for compensation:
+
+```python
+from airflow.utils.trigger_rule import TriggerRule
+from airflow.operators.python import PythonOperator
+
+cleanup = PythonOperator(
+    task_id='cleanup_on_failure',
+    python_callable=cleanup_temp_data,
+    trigger_rule=TriggerRule.ONE_FAILED,
+    dag=dag,
+)
+
+spark_job >> cleanup
+```
+
+## Monitoring and Debugging
+
+### XCom Integration
+
+Access job IDs for monitoring:
+
+```python
+def check_job_status(**context):
+    job_id = context['task_instance'].xcom_pull(
+        task_ids='spark_job',
+        key='spark_job_id'
+    )
+    print(f"Spark job ID: {job_id}")
+```
+
+### Log Retrieval
+
+Logs are automatically captured and available in Airflow task logs.
+
+### Spark UI
+
+Access Spark UI for detailed monitoring:
+- Standalone: http://spark-master:8080
+- YARN: YARN Resource Manager UI
+- Kubernetes: Use kubectl logs or K8s dashboard
+
+## Performance Optimization
+
+### Memory Management
+
+```python
+conf={
+    # Driver memory
+    'spark.driver.memory': '4g',
+    'spark.driver.maxResultSize': '2g',
+    
+    # Executor memory
+    'spark.executor.memory': '8g',
+    'spark.executor.memoryOverhead': '1g',
+    
+    # Memory fractions
+    'spark.memory.fraction': '0.8',
+    'spark.memory.storageFraction': '0.3',
+}
+```
+
+### Shuffle Optimization
+
+```python
+conf={
+    # Shuffle partitions
+    'spark.sql.shuffle.partitions': '200',  # Adjust based on data size
+    
+    # Shuffle behavior
+    'spark.shuffle.compress': 'true',
+    'spark.shuffle.spill.compress': 'true',
+    
+    # Shuffle service (YARN/K8s)
+    'spark.shuffle.service.enabled': 'true',
+}
+```
+
+### Parallelism
+
+```python
+conf={
+    # Default parallelism
+    'spark.default.parallelism': '100',
+    
+    # SQL partitions
+    'spark.sql.shuffle.partitions': '100',
+    
+    # Task execution
+    'spark.task.cpus': '1',
+    'spark.executor.cores': '4',
+}
+```
+
+## Security
+
+### Kerberos (YARN)
+
+```python
+conf={
+    'spark.yarn.keytab': '/path/to/keytab',
+    'spark.yarn.principal': 'spark@REALM',
+}
+```
+
+### Kubernetes RBAC
+
+```python
+k8s_task = SparkKubernetesOperator(
+    task_id='secure_job',
+    kubernetes_service_account='spark-privileged',
+    conf={
+        'spark.kubernetes.authenticate.driver.serviceAccountName': 'spark-privileged',
+    },
+    dag=dag,
+)
+```
+
+## Best Practices
+
+1. **Use appropriate cluster type**:
+   - Development: Standalone
+   - Production (on-premise): YARN
+   - Production (cloud): Kubernetes
+
+2. **Set resource limits**:
+   - Prevent resource starvation
+   - Use dynamic allocation for variable workloads
+
+3. **Enable monitoring**:
+   - Spark UI for job details
+   - Airflow logs for orchestration
+   - Metrics collection for performance
+
+4. **Implement retry logic**:
+   - Use exponential backoff
+   - Set reasonable max retries (2-3)
+
+5. **Configure timeouts**:
+   - Prevent hung jobs
+   - Set based on expected runtime + buffer
+
+6. **Test locally first**:
+   - Use Standalone cluster for development
+   - Validate on larger clusters for production
+
+7. **Version control Spark apps**:
+   - Treat Spark applications as code
+   - Use Git for version management
+
+## Example DAGs
+
+- **Intermediate**: `dags/examples/intermediate/demo_spark_standalone_v1.py`
+- **Advanced**: `dags/examples/advanced/demo_spark_multi_cluster_v1.py`
+
+## Troubleshooting
+
+### Job submission fails
+
+**Check**:
+- Spark cluster is running
+- Airflow connection configured correctly
+- Network connectivity from Airflow to cluster
+- Application path is accessible
+
+### Jobs hang indefinitely
+
+**Solutions**:
+- Set execution_timeout
+- Check Spark UI for blocked stages
+- Verify resource availability
+- Check for data skew
+
+### Out of memory errors
+
+**Solutions**:
+- Increase executor memory
+- Adjust memory fractions
+- Repartition data
+- Enable dynamic allocation
+
+### Slow performance
+
+**Solutions**:
+- Optimize shuffle partitions
+- Check data locality
+- Enable compression
+- Review execution plan in Spark UI
+
+## Additional Resources
+
+- [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
+- [Spark Configuration Reference](https://spark.apache.org/docs/latest/configuration.html)
+- [Spark on Kubernetes Guide](https://spark.apache.org/docs/latest/running-on-kubernetes.html)
+- [Development Guide](./development.md)
+- [Docker Spark Setup](../docker/spark/README.md)

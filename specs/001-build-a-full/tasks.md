@@ -176,11 +176,11 @@
 - [x] T068 [US3] Implement Spark Kubernetes operator in src/operators/spark/kubernetes_operator.py (namespace config, pod templates, K8s service account, resource limits)
 - [x] T069 [P] [US3] Create sample Spark application in src/spark_apps/word_count.py (simple PySpark job for testing)
 - [x] T070 [P] [US3] Create sample Spark application in src/spark_apps/sales_aggregation.py (aggregates mock warehouse data)
-- [ ] T071 [P] [US3] Create Spark cluster Docker containers in docker/spark/ (Dockerfile.standalone for local testing)
-- [ ] T072 [US3] Register Spark operators in operator registry in dags/factory/operator_registry.py
-- [ ] T073 [US3] Create example DAG using Spark Standalone in dags/examples/intermediate/demo_spark_standalone_v1.py
-- [ ] T074 [US3] Create example DAG using multi-cluster Spark in dags/examples/advanced/demo_spark_multi_cluster_v1.py (demonstrates all three cluster types)
-- [ ] T075 [P] [US3] Document Spark operator usage and configuration in docs/operator_guide.md
+- [x] T071 [P] [US3] Create Spark cluster Docker containers in docker/spark/ (Dockerfile.standalone for local testing)
+- [x] T072 [US3] Register Spark operators in operator registry in dags/factory/operator_registry.py
+- [x] T073 [US3] Create example DAG using Spark Standalone in dags/examples/intermediate/demo_spark_standalone_v1.py
+- [x] T074 [US3] Create example DAG using multi-cluster Spark in dags/examples/advanced/demo_spark_multi_cluster_v1.py (demonstrates all three cluster types)
+- [x] T075 [P] [US3] Document Spark operator usage and configuration in docs/operator_guide.md
 
 **Checkpoint**: Spark job orchestration working for all three cluster types
 
