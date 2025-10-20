@@ -19,12 +19,14 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    # Environment variables from .env file
+    # Warehouse connection environment variables
     WAREHOUSE_HOST: ${WAREHOUSE_HOST:-airflow-warehouse}
     WAREHOUSE_PORT: ${WAREHOUSE_PORT:-5432}
     WAREHOUSE_DB: ${WAREHOUSE_DB:-warehouse}
     WAREHOUSE_USER: ${WAREHOUSE_USER:-warehouse_user}
     WAREHOUSE_PASSWORD: ${WAREHOUSE_PASSWORD:-warehouse_pass}
+    # Airflow connection for warehouse (programmatic access)
+    AIRFLOW_CONN_WAREHOUSE_DEFAULT: postgresql://${WAREHOUSE_USER:-warehouse_user}:${WAREHOUSE_PASSWORD:-warehouse_pass}@${WAREHOUSE_HOST:-airflow-warehouse}:${WAREHOUSE_PORT:-5432}/${WAREHOUSE_DB:-warehouse}
     SMTP_HOST: ${SMTP_HOST:-}
     SMTP_PORT: ${SMTP_PORT:-587}
     SMTP_USER: ${SMTP_USER:-}
@@ -37,6 +39,7 @@ x-airflow-common:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
     - ./tests:/opt/airflow/tests
+    - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ./data:/opt/airflow/data
   user: "${AIRFLOW_UID:-50000}:0"

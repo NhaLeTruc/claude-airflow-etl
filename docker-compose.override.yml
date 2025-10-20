@@ -1,0 +1,59 @@
+# ============================================================================
+# Apache Airflow ETL Demo Platform - Development Override
+# ============================================================================
+# Purpose: Override configuration for faster local development iteration
+# Usage: Automatically merged with docker-compose.yml by Docker Compose
+# ============================================================================
+
+# This file provides development-friendly overrides:
+# - Faster startup by disabling non-essential health checks
+# - Less strict restart policies
+# - Development-optimized environment variables
+
+services:
+  # Airflow services - development overrides
+  airflow-webserver:
+    # Allow faster restarts during development
+    restart: "no"
+    environment:
+      # Enable debug logging for development
+      AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
+      # Faster DAG refresh for development
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30  # 30 seconds instead of default
+      # Disable example DAGs
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+  airflow-scheduler:
+    # Allow faster restarts during development
+    restart: "no"
+    environment:
+      # Enable debug logging for development
+      AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
+      # Faster DAG file parsing
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
+      AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 30
+      # Less aggressive task instance cleanup for debugging
+      AIRFLOW__SCHEDULER__TASK_RUNNER: StandardTaskRunner
+
+  airflow-postgres:
+    # Development doesn't need aggressive restart
+    restart: "no"
+
+  airflow-warehouse:
+    # Development doesn't need aggressive restart
+    restart: "no"
+
+# ============================================================================
+# Development Notes
+# ============================================================================
+#
+# To use production settings instead of development overrides:
+#   docker compose -f docker-compose.yml up
+#
+# To explicitly use both files (default behavior):
+#   docker compose up
+#
+# To disable this override file:
+#   Rename or delete docker-compose.override.yml
+#
+# ============================================================================

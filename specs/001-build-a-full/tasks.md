@@ -136,19 +136,19 @@
 
 ### Tests for User Story 6 (TDD: Write tests FIRST) ⚠️
 
-- [ ] T050 [P] [US6] Integration test for Docker Compose startup in tests/integration/test_docker_environment.py (test all services healthy within timeout)
-- [ ] T051 [P] [US6] Integration test for DAG hot-reload in tests/integration/test_dag_hotreload.py (test new DAG file appears in UI within 30 seconds)
-- [ ] T052 [P] [US6] Integration test for environment reset in tests/integration/test_environment_reset.py (test clean state after down -v and restart)
+- [x] T050 [P] [US6] Integration test for Docker Compose startup in tests/integration/test_docker_environment.py (test all services healthy within timeout)
+- [x] T051 [P] [US6] Integration test for DAG hot-reload in tests/integration/test_dag_hotreload.py (test new DAG file appears in UI within 30 seconds)
+- [x] T052 [P] [US6] Integration test for environment reset in tests/integration/test_environment_reset.py (test clean state after down -v and restart)
 
 ### Implementation for User Story 6
 
-- [ ] T053 [US6] Configure Airflow environment variables in docker-compose.yml (executor type, load examples=false, expose config, logging level)
-- [ ] T054 [US6] Configure warehouse database initialization in docker-compose.yml (run schema.sql and seed_data.sql on first start)
-- [ ] T055 [US6] Create entrypoint script for Airflow container in docker/airflow/entrypoint.sh (wait for postgres, init DB, create admin user, start services)
-- [ ] T056 [P] [US6] Configure Airflow connections via environment variables in docker-compose.yml (warehouse postgres connection)
-- [ ] T057 [P] [US6] Create docker-compose development override file docker-compose.override.yml for faster local iteration (disable unnecessary services)
-- [ ] T058 [US6] Test Docker Compose startup end-to-end and validate all services reach healthy state
-- [ ] T059 [P] [US6] Document local development setup in docs/development.md (prerequisites, startup commands, troubleshooting)
+- [x] T053 [US6] Configure Airflow environment variables in docker-compose.yml (executor type, load examples=false, expose config, logging level)
+- [x] T054 [US6] Configure warehouse database initialization in docker-compose.yml (run schema.sql and seed_data.sql on first start)
+- [x] T055 [US6] Create entrypoint script for Airflow container in docker/airflow/entrypoint.sh (wait for postgres, init DB, create admin user, start services)
+- [x] T056 [P] [US6] Configure Airflow connections via environment variables in docker-compose.yml (warehouse postgres connection)
+- [x] T057 [P] [US6] Create docker-compose development override file docker-compose.override.yml for faster local iteration (disable unnecessary services)
+- [x] T058 [US6] Test Docker Compose startup end-to-end and validate all services reach healthy state
+- [x] T059 [P] [US6] Document local development setup in docs/development.md (prerequisites, startup commands, troubleshooting)
 
 **Checkpoint**: Complete local environment working - developers can iterate on features
 
