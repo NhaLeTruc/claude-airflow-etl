@@ -12,6 +12,16 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.python import PythonOperator
 
+# Import custom Spark operators
+try:
+    from src.operators.spark.standalone_operator import SparkStandaloneOperator
+    from src.operators.spark.yarn_operator import SparkYarnOperator
+    from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
+
+    SPARK_OPERATORS_AVAILABLE = True
+except ImportError:
+    SPARK_OPERATORS_AVAILABLE = False
+
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -34,6 +44,7 @@ class OperatorRegistry:
         """Initialize operator registry with built-in operators."""
         self._operators: Dict[str, Type[BaseOperator]] = {}
         self._register_builtin_operators()
+        self._register_custom_operators()
         logger.debug("OperatorRegistry initialized", operator_count=len(self._operators))
 
     def _register_builtin_operators(self) -> None:
@@ -48,6 +59,27 @@ class OperatorRegistry:
             self._operators[name] = operator_class
 
         logger.debug("Built-in operators registered", count=len(builtin_operators))
+
+    def _register_custom_operators(self) -> None:
+        """Register custom operators (Spark, notifications, data quality, etc.)."""
+        custom_operators = {}
+
+        # Register Spark operators if available
+        if SPARK_OPERATORS_AVAILABLE:
+            custom_operators.update(
+                {
+                    "SparkStandaloneOperator": SparkStandaloneOperator,
+                    "SparkYarnOperator": SparkYarnOperator,
+                    "SparkKubernetesOperator": SparkKubernetesOperator,
+                }
+            )
+            logger.debug("Spark operators registered", count=3)
+
+        # Register custom operators
+        for name, operator_class in custom_operators.items():
+            self._operators[name] = operator_class
+
+        logger.debug("Custom operators registered", count=len(custom_operators))
 
     def register_operator(self, name: str, operator_class: Type[BaseOperator]) -> None:
         """

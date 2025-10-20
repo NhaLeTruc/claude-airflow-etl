@@ -1,0 +1,30 @@
+# Apache Spark Standalone Cluster - Dockerfile
+# Based on official Spark image for local testing
+
+FROM apache/spark:3.5.0-python3
+
+USER root
+
+# Install additional Python packages for demo applications
+RUN pip install --no-cache-dir \
+    faker==20.0.3 \
+    psycopg2-binary==2.9.9
+
+# Create directories for Spark applications and data
+RUN mkdir -p /opt/spark/apps /opt/spark/data
+
+# Copy sample Spark applications
+COPY --chown=spark:spark src/spark_apps/* /opt/spark/apps/
+
+# Set working directory
+WORKDIR /opt/spark
+
+# Switch back to spark user
+USER spark
+
+# Expose Spark master and worker ports
+# Master UI: 8080, Master: 7077, Worker UI: 8081
+EXPOSE 7077 8080 8081
+
+# Default command (can be overridden)
+CMD ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]

@@ -1,0 +1,80 @@
+# Docker Compose for Spark Standalone Cluster
+# Use this for local Spark testing with Airflow
+
+version: '3.8'
+
+services:
+  spark-master:
+    build:
+      context: ../..
+      dockerfile: docker/spark/Dockerfile.standalone
+    container_name: spark-master
+    hostname: spark-master
+    ports:
+      - "8090:8080"  # Spark Master UI (avoiding conflict with Airflow on 8080)
+      - "7077:7077"  # Spark Master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+    networks:
+      - airflow-network
+    volumes:
+      - ../../src/spark_apps:/opt/spark/apps
+      - spark-data:/opt/spark/data
+
+  spark-worker-1:
+    build:
+      context: ../..
+      dockerfile: docker/spark/Dockerfile.standalone
+    container_name: spark-worker-1
+    hostname: spark-worker-1
+    ports:
+      - "8091:8081"  # Worker UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+      - SPARK_WORKER_WEBUI_PORT=8081
+    networks:
+      - airflow-network
+    volumes:
+      - ../../src/spark_apps:/opt/spark/apps
+      - spark-data:/opt/spark/data
+    depends_on:
+      - spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+  spark-worker-2:
+    build:
+      context: ../..
+      dockerfile: docker/spark/Dockerfile.standalone
+    container_name: spark-worker-2
+    hostname: spark-worker-2
+    ports:
+      - "8092:8081"  # Worker UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+      - SPARK_WORKER_WEBUI_PORT=8081
+    networks:
+      - airflow-network
+    volumes:
+      - ../../src/spark_apps:/opt/spark/apps
+      - spark-data:/opt/spark/data
+    depends_on:
+      - spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+volumes:
+  spark-data:
+    name: spark-data
+
+networks:
+  airflow-network:
+    external: true
+    name: airflow-network
