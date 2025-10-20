@@ -221,17 +221,17 @@
 
 ### Tests for Data Quality Operators (TDD: Write tests FIRST) ⚠️
 
-- [ ] T089 [P] Unit test for base quality operator in tests/unit/test_operators/test_base_quality.py (test severity levels, threshold validation, result logging)
-- [ ] T090 [P] Unit test for schema validator in tests/unit/test_operators/test_schema_validator.py (test column validation, type checking, error reporting)
-- [ ] T091 [P] Unit test for completeness checker in tests/unit/test_operators/test_completeness_checker.py (test row count validation, tolerance calculation)
-- [ ] T092 [P] Unit test for freshness checker in tests/unit/test_operators/test_freshness_checker.py (test timestamp comparison, max age validation)
-- [ ] T093 [P] Unit test for uniqueness checker in tests/unit/test_operators/test_uniqueness_checker.py (test duplicate detection, composite key support)
-- [ ] T094 [P] Unit test for null rate checker in tests/unit/test_operators/test_null_rate_checker.py (test null percentage calculation, threshold comparison)
-- [ ] T095 [P] Integration test for quality check execution in tests/integration/test_data_quality_execution.py (test quality checks run against warehouse, results stored correctly)
+- [X] T089 [P] Unit test for base quality operator in tests/unit/test_operators/test_base_quality.py (test severity levels, threshold validation, result logging)
+- [X] T090 [P] Unit test for schema validator in tests/unit/test_operators/test_schema_validator.py (test column validation, type checking, error reporting)
+- [X] T091 [P] Unit test for completeness checker in tests/unit/test_operators/test_completeness_checker.py (test row count validation, tolerance calculation)
+- [X] T092 [P] Unit test for freshness checker in tests/unit/test_operators/test_freshness_checker.py (test timestamp comparison, max age validation)
+- [X] T093 [P] Unit test for uniqueness checker in tests/unit/test_operators/test_uniqueness_checker.py (test duplicate detection, composite key support)
+- [X] T094 [P] Unit test for null rate checker in tests/unit/test_operators/test_null_rate_checker.py (test null percentage calculation, threshold comparison)
+- [X] T095 [P] Integration test for quality check execution in tests/integration/test_data_quality_execution.py (test quality checks run against warehouse, results stored correctly)
 
 ### Implementation of Data Quality Operators
 
-- [ ] T096 [US5] Implement base quality operator in src/operators/quality/base_quality_operator.py (severity enum, result storage, threshold validation, structured logging)
+- [X] T096 [US5] Implement base quality operator in src/operators/quality/base_quality_operator.py (severity enum, result storage, threshold validation, structured logging)
 - [ ] T097 [P] [US5] Implement schema validation operator in src/operators/quality/schema_validator.py (column list check, data type validation, missing/extra column detection)
 - [ ] T098 [P] [US5] Implement completeness check operator in src/operators/quality/completeness_checker.py (row count query, min/max/expected validation, tolerance percentage)
 - [ ] T099 [P] [US5] Implement freshness check operator in src/operators/quality/freshness_checker.py (max timestamp query, age calculation, SLA comparison)
