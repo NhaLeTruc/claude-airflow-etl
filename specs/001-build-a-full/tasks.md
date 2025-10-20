@@ -170,12 +170,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T065 [US3] Implement base Spark hook in src/hooks/spark_hook.py extending BaseHook (connection management, job submission API, status polling, log retrieval)
-- [ ] T066 [US3] Implement Spark Standalone operator in src/operators/spark/standalone_operator.py (master URL config, application submission, job monitoring)
-- [ ] T067 [US3] Implement Spark YARN operator in src/operators/spark/yarn_operator.py (queue selection, executor/driver resource config, YARN-specific parameters)
-- [ ] T068 [US3] Implement Spark Kubernetes operator in src/operators/spark/kubernetes_operator.py (namespace config, pod templates, K8s service account, resource limits)
-- [ ] T069 [P] [US3] Create sample Spark application in src/spark_apps/word_count.py (simple PySpark job for testing)
-- [ ] T070 [P] [US3] Create sample Spark application in src/spark_apps/sales_aggregation.py (aggregates mock warehouse data)
+- [x] T065 [US3] Implement base Spark hook in src/hooks/spark_hook.py extending BaseHook (connection management, job submission API, status polling, log retrieval)
+- [x] T066 [US3] Implement Spark Standalone operator in src/operators/spark/standalone_operator.py (master URL config, application submission, job monitoring)
+- [x] T067 [US3] Implement Spark YARN operator in src/operators/spark/yarn_operator.py (queue selection, executor/driver resource config, YARN-specific parameters)
+- [x] T068 [US3] Implement Spark Kubernetes operator in src/operators/spark/kubernetes_operator.py (namespace config, pod templates, K8s service account, resource limits)
+- [x] T069 [P] [US3] Create sample Spark application in src/spark_apps/word_count.py (simple PySpark job for testing)
+- [x] T070 [P] [US3] Create sample Spark application in src/spark_apps/sales_aggregation.py (aggregates mock warehouse data)
 - [ ] T071 [P] [US3] Create Spark cluster Docker containers in docker/spark/ (Dockerfile.standalone for local testing)
 - [ ] T072 [US3] Register Spark operators in operator registry in dags/factory/operator_registry.py
 - [ ] T073 [US3] Create example DAG using Spark Standalone in dags/examples/intermediate/demo_spark_standalone_v1.py
