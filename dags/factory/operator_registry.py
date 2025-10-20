@@ -32,6 +32,18 @@ try:
 except ImportError:
     NOTIFICATION_OPERATORS_AVAILABLE = False
 
+# Import custom data quality operators
+try:
+    from src.operators.quality.schema_validator import SchemaValidator
+    from src.operators.quality.completeness_checker import CompletenessChecker
+    from src.operators.quality.freshness_checker import FreshnessChecker
+    from src.operators.quality.uniqueness_checker import UniquenessChecker
+    from src.operators.quality.null_rate_checker import NullRateChecker
+
+    QUALITY_OPERATORS_AVAILABLE = True
+except ImportError:
+    QUALITY_OPERATORS_AVAILABLE = False
+
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -95,6 +107,19 @@ class OperatorRegistry:
                 }
             )
             logger.debug("Notification operators registered", count=3)
+
+        # Register data quality operators if available
+        if QUALITY_OPERATORS_AVAILABLE:
+            custom_operators.update(
+                {
+                    "SchemaValidator": SchemaValidator,
+                    "CompletenessChecker": CompletenessChecker,
+                    "FreshnessChecker": FreshnessChecker,
+                    "UniquenessChecker": UniquenessChecker,
+                    "NullRateChecker": NullRateChecker,
+                }
+            )
+            logger.debug("Data quality operators registered", count=5)
 
         # Register custom operators
         for name, operator_class in custom_operators.items():

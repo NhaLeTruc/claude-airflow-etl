@@ -232,12 +232,12 @@
 ### Implementation of Data Quality Operators
 
 - [X] T096 [US5] Implement base quality operator in src/operators/quality/base_quality_operator.py (severity enum, result storage, threshold validation, structured logging)
-- [ ] T097 [P] [US5] Implement schema validation operator in src/operators/quality/schema_validator.py (column list check, data type validation, missing/extra column detection)
-- [ ] T098 [P] [US5] Implement completeness check operator in src/operators/quality/completeness_checker.py (row count query, min/max/expected validation, tolerance percentage)
-- [ ] T099 [P] [US5] Implement freshness check operator in src/operators/quality/freshness_checker.py (max timestamp query, age calculation, SLA comparison)
-- [ ] T100 [P] [US5] Implement uniqueness check operator in src/operators/quality/uniqueness_checker.py (GROUP BY with COUNT, duplicate row identification, composite key support)
-- [ ] T101 [P] [US5] Implement null rate check operator in src/operators/quality/null_rate_checker.py (NULL count per column, percentage calculation, threshold validation)
-- [ ] T102 [US5] Register all quality operators in operator registry in dags/factory/operator_registry.py
+- [X] T097 [P] [US5] Implement schema validation operator in src/operators/quality/schema_validator.py (column list check, data type validation, missing/extra column detection)
+- [X] T098 [P] [US5] Implement completeness check operator in src/operators/quality/completeness_checker.py (row count query, min/max/expected validation, tolerance percentage)
+- [X] T099 [P] [US5] Implement freshness check operator in src/operators/quality/freshness_checker.py (max timestamp query, age calculation, SLA comparison)
+- [X] T100 [P] [US5] Implement uniqueness check operator in src/operators/quality/uniqueness_checker.py (GROUP BY with COUNT, duplicate row identification, composite key support)
+- [X] T101 [P] [US5] Implement null rate check operator in src/operators/quality/null_rate_checker.py (NULL count per column, percentage calculation, threshold validation)
+- [X] T102 [US5] Register all quality operators in operator registry in dags/factory/operator_registry.py
 - [ ] T103 [P] [US5] Create Great Expectations integration utility in src/utils/great_expectations_helper.py (expectation suite loader, validation result parser)
 
 **Checkpoint**: All data quality operators implemented and tested
