@@ -1,1617 +1,878 @@
-# Operator Guide: Retry and Failure Handling Patterns
+# Operator Guide
 
-Complete guide to implementing robust retry and failure handling patterns in Apache Airflow ETL pipelines.
+This comprehensive guide documents all custom Airflow operators available in the Apache Airflow ETL Demo Platform, including their parameters, usage examples, and best practices.
+
+---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Retry Strategies](#retry-strategies)
-- [Timeout Management](#timeout-management)
-- [Failure Handling](#failure-handling)
-- [Trigger Rules](#trigger-rules)
-- [Compensation Logic](#compensation-logic)
-- [Error Logging](#error-logging)
+- [Spark Operators](#spark-operators)
+  - [SparkStandaloneOperator](#sparkstandaloneoperator)
+  - [SparkYarnOperator](#sparkyarnoperator)
+  - [SparkKubernetesOperator](#sparkkubernetesoperator)
+- [Data Quality Operators](#data-quality-operators)
+  - [SchemaValidationOperator](#schemavalidationoperator)
+  - [CompletenessCheckOperator](#completenesscheckoperator)
+  - [FreshnessCheckOperator](#freshnesscheckoperator)
+  - [UniquenessCheckOperator](#uniquenesscheckoperator)
+  - [NullRateCheckOperator](#nullratecheckoperator)
+- [Notification Operators](#notification-operators)
+  - [EmailNotificationOperator](#emailnotificationoperator)
+  - [MSTeamsNotificationOperator](#msteamsnotificationoperator)
+  - [TelegramNotificationOperator](#telegramnotificationoperator)
 - [Best Practices](#best-practices)
-- [Examples](#examples)
-
-## Overview
-
-Resilient pipelines handle failures gracefully through:
-- **Automatic retries** with configurable backoff strategies
-- **Timeout enforcement** to prevent hung tasks
-- **Failure propagation** control via trigger rules
-- **Compensation logic** for cleanup and rollback
-- **Comprehensive error logging** for debugging
-
-## Retry Strategies
-
-### Exponential Backoff (Recommended)
-
-Doubles the delay between each retry attempt.
-
-**When to use**: Most scenarios, especially external API calls and database operations
-
-**Configuration**:
-
-```python
-from src.utils.retry_policies import create_retry_config
-
-retry_config = create_retry_config(
-    max_retries=3,
-    strategy="exponential",
-    base_delay=60,  # 1 minute
-    max_delay=600   # 10 minutes cap
-)
-
-# Retry delays: 60s → 120s → 240s → 480s (capped at 600s)
-```
-
-**Advantages**:
-- Reduces load on failing systems
-- Gives systems time to recover
-- Standard industry practice
-
-**Use in default_args**:
-
-```python
-default_args = {
-    "owner": "data_team",
-    **retry_config,
-}
-```
-
-### Linear Backoff
-
-Increases delay by a fixed amount each retry.
-
-**When to use**: Predictable recovery times, rate limiting scenarios
-
-**Configuration**:
-
-```python
-retry_config = create_retry_config(
-    max_retries=4,
-    strategy="linear",
-    base_delay=60
-)
-
-# Retry delays: 60s → 120s → 180s → 240s
-```
-
-**Advantages**:
-- Predictable retry schedule
-- Gentler increase than exponential
-
-### Fixed Backoff
-
-Same delay for all retry attempts.
-
-**When to use**: Known fixed recovery windows, simple retry logic
-
-**Configuration**:
-
-```python
-retry_config = create_retry_config(
-    max_retries=5,
-    strategy="fixed",
-    base_delay=120  # Always 2 minutes
-)
-
-# Retry delays: 120s → 120s → 120s → 120s → 120s
-```
-
-**Advantages**:
-- Simplest to understand
-- Consistent behavior
-
-## Timeout Management
-
-### Task-Level Timeouts
-
-Prevent tasks from running indefinitely.
-
-**Configuration**:
-
-```python
-from src.utils.timeout_handler import create_timeout_config
-
-timeout_config = create_timeout_config(
-    timeout_seconds=1800  # 30 minutes
-)
-
-default_args = {
-    "owner": "data_team",
-    **timeout_config,
-}
-```
-
-### Timeout with Callback
-
-Execute custom logic when timeout occurs.
-
-```python
-def on_timeout_callback(context):
-    """Called when task times out."""
-    task_id = context["task"].task_id
-    execution_date = context["execution_date"]
-
-    logger.error(
-        "Task timeout",
-        task_id=task_id,
-        execution_date=str(execution_date)
-    )
-
-    # Send alert, cleanup resources, etc.
-
-timeout_config = create_timeout_config(
-    timeout_seconds=1800,
-    on_timeout_callback=on_timeout_callback
-)
-```
-
-### Monitoring Timeout Approaching
-
-Warn before timeout is reached.
-
-```python
-from src.utils.timeout_handler import should_warn_about_timeout
-
-start_time = task_instance.start_date
-current_time = datetime.now()
-
-if should_warn_about_timeout(start_time, current_time, 1800, threshold=0.8):
-    logger.warning("Task approaching timeout (80% elapsed)")
-```
-
-## Failure Handling
-
-### Downstream Task Skipping
-
-By default, downstream tasks skip when upstream fails.
-
-```python
-# Task A fails → Task B automatically skips
-task_a >> task_b
-```
-
-**Behavior**:
-- Task B state: `SKIPPED`
-- Task B doesn't consume resources
-- Failure doesn't propagate further
-
-### Parallel Task Independence
-
-Parallel tasks continue even if siblings fail.
-
-```python
-# If task_a fails, task_b still runs
-[task_a, task_b] >> task_c
-```
-
-**Behavior**:
-- Task A fails → Task B continues
-- Task C waits for both (may skip if default trigger)
-
-### Failure Callbacks
-
-Execute custom logic on task failure.
-
-```python
-def on_failure_callback(context):
-    """Called when task fails after all retries."""
-    task_id = context["task"].task_id
-    exception = context.get("exception")
-    try_number = context["task_instance"].try_number
-
-    logger.error(
-        "Task failed permanently",
-        task_id=task_id,
-        try_number=try_number,
-        exception=str(exception),
-        error_type=type(exception).__name__
-    )
-
-    # Send alerts, create tickets, etc.
-
-default_args = {
-    "on_failure_callback": on_failure_callback,
-}
-```
-
-### Retry Callbacks
-
-Execute logic on each retry attempt.
-
-```python
-def on_retry_callback(context):
-    """Called when task is retried."""
-    task_id = context["task"].task_id
-    try_number = context["task_instance"].try_number
-    max_tries = context["task_instance"].max_tries
-
-    logger.warning(
-        "Task retrying",
-        task_id=task_id,
-        try_number=try_number,
-        max_tries=max_tries
-    )
-
-default_args = {
-    "on_retry_callback": on_retry_callback,
-}
-```
-
-## Trigger Rules
-
-Control when tasks execute based on upstream states.
-
-### ALL_SUCCESS (Default)
-
-Task runs only if ALL upstream tasks succeeded.
-
-```python
-from airflow.utils.trigger_rule import TriggerRule
-
-task = BashOperator(
-    task_id="task",
-    bash_command="echo 'All upstream succeeded'",
-    trigger_rule=TriggerRule.ALL_SUCCESS,  # Default
-)
-```
-
-### ONE_SUCCESS
-
-Task runs if AT LEAST ONE upstream task succeeded.
-
-```python
-task = BashOperator(
-    task_id="merge_results",
-    bash_command="echo 'At least one branch succeeded'",
-    trigger_rule=TriggerRule.ONE_SUCCESS,
-)
-
-# Use for: Partial result processing
-```
-
-### ALL_FAILED
-
-Task runs only if ALL upstream tasks failed.
-
-```python
-task = BashOperator(
-    task_id="send_failure_alert",
-    bash_command="echo 'Everything failed'",
-    trigger_rule=TriggerRule.ALL_FAILED,
-)
-
-# Use for: Global failure handling
-```
-
-### ALL_DONE
-
-Task runs after ALL upstream tasks complete (success OR failure).
-
-```python
-task = BashOperator(
-    task_id="cleanup",
-    bash_command="echo 'Cleaning up resources'",
-    trigger_rule=TriggerRule.ALL_DONE,
-)
-
-# Use for: Cleanup, final status checks
-```
-
-### ONE_FAILED
-
-Task runs if AT LEAST ONE upstream task failed.
-
-```python
-task = BashOperator(
-    task_id="partial_failure_handler",
-    bash_command="echo 'Something went wrong'",
-    trigger_rule=TriggerRule.ONE_FAILED,
-)
-```
-
-### NONE_FAILED
-
-Task runs if NO upstream tasks failed (skipped = ok).
-
-```python
-task = BashOperator(
-    task_id="conditional_task",
-    bash_command="echo 'No failures detected'",
-    trigger_rule=TriggerRule.NONE_FAILED,
-)
-```
-
-## Compensation Logic
-
-### Cleanup Tasks
-
-Always run cleanup regardless of success/failure.
-
-```python
-def cleanup_resources(**context):
-    """Cleanup temporary files, connections, locks."""
-    logger.info("Executing cleanup")
-
-    # Release locks
-    # Delete temporary files
-    # Close connections
-    # Update status tables
-
-cleanup = PythonOperator(
-    task_id="cleanup",
-    python_callable=cleanup_resources,
-    trigger_rule=TriggerRule.ALL_DONE,  # Always run
-)
-
-main_tasks >> cleanup
-```
-
-### Rollback Logic
-
-Undo partial changes on failure.
-
-```python
-def rollback_changes(**context):
-    """Rollback database changes on failure."""
-    execution_date = context["execution_date"]
-
-    logger.warning("Rolling back changes", execution_date=str(execution_date))
-
-    # Delete partially loaded data
-    # Restore backups
-    # Reset state flags
-
-rollback = PythonOperator(
-    task_id="rollback",
-    python_callable=rollback_changes,
-    trigger_rule=TriggerRule.ONE_FAILED,  # Only on failure
-)
-
-[extract, transform, load] >> rollback
-```
-
-### Compensation Transactions
-
-Execute compensating actions for failed operations.
-
-```python
-def compensate_failed_transfer(**context):
-    """Compensate for failed data transfer."""
-    logger.info("Executing compensation logic")
-
-    # Reverse credited amounts
-    # Send reversal notifications
-    # Update audit logs
-
-compensate = PythonOperator(
-    task_id="compensate",
-    python_callable=compensate_failed_transfer,
-    trigger_rule=TriggerRule.ALL_FAILED,
-)
-```
-
-## Error Logging
-
-### Structured Logging with Context
-
-Include full execution context in error logs.
-
-```python
-from src.utils.logger import get_logger
-
-logger = get_logger(__name__)
-
-def task_function(**context):
-    # Add context
-    logger.add_context(
-        dag_id=context["dag"].dag_id,
-        task_id=context["task"].task_id,
-        execution_date=str(context["execution_date"]),
-        run_id=context["run_id"],
-        try_number=context["task_instance"].try_number
-    )
-
-    try:
-        # Task logic
-        logger.info("Task started")
-        result = perform_operation()
-        logger.info("Task completed", result=result)
-
-    except Exception as e:
-        logger.exception(
-            "Task failed",
-            error_type=type(e).__name__,
-            error_message=str(e)
-        )
-        raise
-```
-
-### Error Context in Bash Tasks
-
-Log context in bash commands.
-
-```bash
-bash_command="""
-echo "============================================"
-echo "Task: {{ task.task_id }}"
-echo "DAG: {{ dag.dag_id }}"
-echo "Execution Date: {{ ds }}"
-echo "Run ID: {{ run_id }}"
-echo "Try Number: {{ task_instance.try_number }}"
-echo "Max Tries: {{ task_instance.max_tries }}"
-echo "============================================"
-
-# Your task logic here
-
-if [ $? -ne 0 ]; then
-    echo "ERROR: Task failed"
-    echo "Error code: $?"
-    exit 1
-fi
-"""
-```
-
-## Best Practices
-
-### 1. Choose Appropriate Retry Strategy
-
-- **External APIs**: Exponential backoff (reduces load)
-- **Database operations**: Exponential backoff (connection recovery)
-- **File operations**: Fixed backoff (filesystem issues)
-- **Rate-limited APIs**: Linear backoff (predictable)
-
-### 2. Set Reasonable Timeouts
-
-- **Quick tasks** (< 1 min): 5 minute timeout
-- **Medium tasks** (1-10 min): 30 minute timeout
-- **Long tasks** (10-60 min): 2 hour timeout
-- **Very long tasks** (> 1 hour): Consider breaking into smaller tasks
-
-### 3. Use Trigger Rules Appropriately
-
-- **Cleanup**: `ALL_DONE`
-- **Partial results**: `ONE_SUCCESS`
-- **Critical paths**: `ALL_SUCCESS` (default)
-- **Error handling**: `ONE_FAILED`
-
-### 4. Implement Idempotency
-
-Make tasks safe to retry:
-
-```python
-def idempotent_task(**context):
-    execution_date = context["execution_date"]
-
-    # Check if already processed
-    if is_already_processed(execution_date):
-        logger.info("Already processed, skipping", execution_date=str(execution_date))
-        return
-
-    # Process data
-    process_data(execution_date)
-
-    # Mark as processed
-    mark_as_processed(execution_date)
-```
-
-### 5. Log Comprehensively
-
-Always log:
-- Task start/end
-- Retry attempts
-- Error details with stack traces
-- Execution context (dag_id, task_id, execution_date)
-- Performance metrics (rows processed, duration)
-
-### 6. Monitor and Alert
-
-- **Email on failure**: Critical paths only
-- **Email on retry**: Usually disable (too noisy)
-- **SLA misses**: For time-sensitive pipelines
-- **Callback functions**: Custom alerting logic
-
-## Examples
-
-### Example 1: Robust API Call
-
-```python
-from src.utils.retry_policies import create_retry_config
-from src.utils.timeout_handler import create_timeout_config
-
-retry_config = create_retry_config(
-    max_retries=5,
-    strategy="exponential",
-    base_delay=60,
-    max_delay=1800
-)
-
-timeout_config = create_timeout_config(timeout_seconds=600)
-
-api_task = BashOperator(
-    task_id="call_external_api",
-    bash_command="curl -f https://api.example.com/data",
-    **retry_config,
-    **timeout_config,
-)
-```
-
-### Example 2: Database Operation with Rollback
-
-```python
-def load_to_database(**context):
-    logger.info("Starting database load")
-
-    try:
-        # Start transaction
-        conn = get_connection()
-        conn.begin()
-
-        # Load data
-        load_data(conn)
-
-        # Commit
-        conn.commit()
-        logger.info("Database load committed")
-
-    except Exception as e:
-        # Rollback on error
-        conn.rollback()
-        logger.error("Database load failed, rolled back", error=str(e))
-        raise
-
-load_task = PythonOperator(
-    task_id="load_database",
-    python_callable=load_to_database,
-    retries=2,
-    retry_delay=timedelta(minutes=5),
-)
-```
-
-### Example 3: Parallel Processing with Partial Failure Handling
-
-```python
-# Parallel extracts
-extract_a = BashOperator(task_id="extract_a", ...)
-extract_b = BashOperator(task_id="extract_b", ...)
-extract_c = BashOperator(task_id="extract_c", ...)
-
-# Merge whatever succeeded
-merge = BashOperator(
-    task_id="merge_results",
-    bash_command="merge.sh",
-    trigger_rule=TriggerRule.ONE_SUCCESS,  # Process partial results
-)
-
-# Cleanup always runs
-cleanup = BashOperator(
-    task_id="cleanup",
-    bash_command="cleanup.sh",
-    trigger_rule=TriggerRule.ALL_DONE,
-)
-
-[extract_a, extract_b, extract_c] >> merge >> cleanup
-```
-
-## Reference
-
-### Utility Functions
-
-```python
-# Retry policies
-from src.utils.retry_policies import (
-    calculate_exponential_backoff,
-    calculate_linear_backoff,
-    calculate_fixed_backoff,
-    create_retry_config,
-    generate_retry_delays,
-)
-
-# Timeout handling
-from src.utils.timeout_handler import (
-    TimeoutChecker,
-    TimeoutContext,
-    create_timeout_config,
-    is_timeout_exceeded,
-    format_timeout_duration,
-)
-
-# Logging
-from src.utils.logger import get_logger
-```
-
-### Example DAGs
-
-- **Beginner**: `dags/examples/beginner/demo_scheduled_pipeline_v1.py`
-- **Advanced**: `dags/examples/advanced/demo_failure_recovery_v1.py`
-
-## Next Steps
-
-- Review example DAGs in `dags/examples/`
-- Implement retry and timeout in your DAGs
-- Test failure scenarios
-- Monitor retry patterns in production
-- Tune backoff strategies based on metrics
-
-For more information, see:
-- [Airflow Documentation - Error Handling](https://airflow.apache.org/docs/apache-airflow/stable/concepts/tasks.html#error-handling)
-- [Development Guide](./development.md)
-- [Testing Guide](../TESTING.md)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-# Spark Operators Guide
-
-Complete guide to using custom Spark operators for multi-cluster job orchestration.
-
 ## Overview
 
-The platform provides three custom Spark operators for submitting and monitoring Spark jobs across different cluster types:
+All custom operators extend Airflow's `BaseOperator` and follow consistent patterns:
 
-- **SparkStandaloneOperator**: Submits jobs to Spark Standalone clusters
-- **SparkYarnOperator**: Submits jobs to Hadoop YARN clusters
-- **SparkKubernetesOperator**: Submits jobs to Kubernetes clusters
+- **Error Handling**: Automatic retries with exponential backoff
+- **Logging**: Structured logging via `src.utils.logging_config`
+- **Configuration**: Parameters validated at instantiation time
+- **Testability**: Unit tests with mocked dependencies
 
-All operators share common functionality:
-- Job submission and tracking
-- Status monitoring
-- Log retrieval
-- Graceful cancellation
-- Resource configuration
-
-## Spark Standalone Operator
-
-### Use Case
-
-Best for local development, testing, and small-scale processing.
-
-### Configuration
+### Import Path
 
 ```python
-from src.operators.spark.standalone_operator import SparkStandaloneOperator
+# Spark operators
+from src.operators.spark import (
+    SparkStandaloneOperator,
+    SparkYarnOperator,
+    SparkKubernetesOperator
+)
 
-spark_task = SparkStandaloneOperator(
-    task_id='process_data',
-    application='/opt/spark/apps/my_app.py',
-    master='spark://spark-master:7077',
-    name='MySparkJob',
-    deploy_mode='client',  # or 'cluster'
-    
-    # Resource configuration
-    driver_memory='1g',
-    driver_cores='1',
-    executor_memory='2g',
-    executor_cores='2',
-    num_executors='3',
-    
-    # Spark configuration
-    conf={
-        'spark.executor.memory': '2g',
-        'spark.sql.shuffle.partitions': '10',
-    },
-    
-    # Application arguments
-    application_args=['--input', '/data/input', '--output', '/data/output'],
-    
-    # Airflow connection
-    conn_id='spark_standalone',
-    
-    dag=dag,
+# Quality operators
+from src.operators.quality import (
+    SchemaValidationOperator,
+    CompletenessCheckOperator,
+    FreshnessCheckOperator,
+    UniquenessCheckOperator,
+    NullRateCheckOperator
+)
+
+# Notification operators
+from src.operators.notifications import (
+    EmailNotificationOperator,
+    MSTeamsNotificationOperator,
+    TelegramNotificationOperator
 )
 ```
 
-### Parameters
+---
 
-- **application** (required): Path to Spark application (.py or .jar)
-- **master** (required): Spark master URL (e.g., `spark://host:7077`)
-- **deploy_mode**: `client` (default) or `cluster`
-- **name**: Application name (visible in Spark UI)
-- **conf**: Dict of Spark configuration properties
-- **application_args**: List of arguments to pass to application
-- **driver_memory**: Driver memory (e.g., '1g', '512m')
-- **driver_cores**: Number of driver cores
-- **executor_memory**: Executor memory
-- **executor_cores**: Number of cores per executor
-- **num_executors**: Number of executor instances
-- **verbose**: Enable verbose spark-submit output
-- **conn_id**: Airflow connection ID
+## Spark Operators
 
-### Example
+All Spark operators submit jobs to distributed Spark clusters and monitor execution until completion.
+
+### SparkStandaloneOperator
+
+Submits Spark jobs to a standalone Spark cluster.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `application_file` | `str` | Yes | - | Path to Spark application (`.py` or `.jar`) |
+| `spark_master` | `str` | Yes | - | Spark master URL (e.g., `spark://master:7077`) |
+| `application_args` | `List[str]` | No | `[]` | Command-line arguments for Spark application |
+| `conf` | `Dict[str, str]` | No | `{}` | Spark configuration properties |
+| `total_executor_cores` | `int` | No | `2` | Total cores for all executors |
+| `executor_memory` | `str` | No | `'2g'` | Memory per executor |
+| `driver_memory` | `str` | No | `'1g'` | Memory for driver |
+| `poll_interval` | `int` | No | `30` | Seconds between status checks |
+| `timeout` | `int` | No | `3600` | Max execution time (seconds) |
+
+#### Usage Example
 
 ```python
-word_count = SparkStandaloneOperator(
-    task_id='word_count',
-    application='/opt/spark/apps/word_count.py',
-    master='spark://spark-master:7077',
-    name='WordCount',
-    executor_memory='1g',
-    executor_cores='1',
-    num_executors='2',
-    dag=dag,
-)
+from airflow import DAG
+from src.operators.spark import SparkStandaloneOperator
+from datetime import datetime, timedelta
+
+default_args = {
+    'owner': 'data-engineering',
+    'retries': 2,
+    'retry_delay': timedelta(minutes=5)
+}
+
+with DAG(
+    dag_id='spark_standalone_example',
+    default_args=default_args,
+    start_date=datetime(2025, 1, 1),
+    schedule='@daily',
+    catchup=False
+) as dag:
+
+    transform_sales_data = SparkStandaloneOperator(
+        task_id='transform_sales_data',
+        application_file='/opt/airflow/spark_jobs/transform_sales.py',
+        spark_master='spark://spark-master:7077',
+        application_args=[
+            '--input', 's3://my-bucket/raw/sales/{{ ds }}',
+            '--output', 's3://my-bucket/processed/sales/{{ ds }}'
+        ],
+        conf={
+            'spark.sql.shuffle.partitions': '200',
+            'spark.executor.memoryOverhead': '512m'
+        },
+        total_executor_cores=8,
+        executor_memory='4g',
+        driver_memory='2g',
+        timeout=7200  # 2 hours
+    )
 ```
 
-## Spark YARN Operator
+#### Behavior
 
-### Use Case
+1. Submits Spark application via `spark-submit`
+2. Polls Spark REST API for job status every `poll_interval` seconds
+3. Returns job metrics (rows processed, execution time) via XCom
+4. Raises `AirflowException` on job failure or timeout
 
-Best for large-scale production workloads in Hadoop ecosystems.
-
-### Configuration
+#### XCom Output
 
 ```python
-from src.operators.spark.yarn_operator import SparkYarnOperator
+{
+    "job_id": "app-20250101-1234-0001",
+    "status": "SUCCESS",
+    "duration_seconds": 425,
+    "rows_processed": 1500000,
+    "output_path": "s3://my-bucket/processed/sales/2025-01-01"
+}
+```
 
-yarn_task = SparkYarnOperator(
+---
+
+### SparkYarnOperator
+
+Submits Spark jobs to a Hadoop YARN cluster.
+
+#### Parameters
+
+Inherits all parameters from `SparkStandaloneOperator`, plus:
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `yarn_queue` | `str` | No | `'default'` | YARN queue name |
+| `deploy_mode` | `str` | No | `'cluster'` | Deployment mode (`client` or `cluster`) |
+| `num_executors` | `int` | No | `4` | Number of executors |
+
+#### Usage Example
+
+```python
+from src.operators.spark import SparkYarnOperator
+
+process_large_dataset = SparkYarnOperator(
     task_id='process_large_dataset',
-    application='/apps/sales_aggregation.py',
-    queue='production',  # YARN queue name
-    deploy_mode='cluster',  # Recommended for YARN
-    
-    # Resource configuration
-    driver_memory='2g',
-    driver_cores='2',
-    executor_memory='4g',
-    executor_cores='4',
-    num_executors='10',
-    
-    # YARN-specific configuration
-    conf={
-        'spark.yarn.queue': 'production',
-        'spark.yarn.maxAppAttempts': '3',
-        'spark.dynamicAllocation.enabled': 'true',
-        'spark.dynamicAllocation.minExecutors': '2',
-        'spark.dynamicAllocation.maxExecutors': '20',
-    },
-    
-    application_args=['--input', 'hdfs:///data/sales'],
-    conn_id='spark_yarn',
-    dag=dag,
-)
-```
-
-### YARN-Specific Parameters
-
-- **queue** (required): YARN queue name (default: 'default')
-- **deploy_mode**: Use 'cluster' for production workloads
-
-### Dynamic Resource Allocation
-
-Enable dynamic allocation for variable workloads:
-
-```python
-conf={
-    'spark.dynamicAllocation.enabled': 'true',
-    'spark.dynamicAllocation.minExecutors': '2',
-    'spark.dynamicAllocation.maxExecutors': '50',
-    'spark.dynamicAllocation.initialExecutors': '5',
-}
-```
-
-## Spark Kubernetes Operator
-
-### Use Case
-
-Best for cloud-native deployments and containerized workflows.
-
-### Configuration
-
-```python
-from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
-
-k8s_task = SparkKubernetesOperator(
-    task_id='process_on_k8s',
-    application='/opt/spark/apps/my_app.py',
-    namespace='spark-jobs',  # K8s namespace
-    kubernetes_service_account='spark-sa',
-    image='my-registry.io/spark:3.5.0-custom',
-    
-    # Resource requests and limits
-    conf={
-        'spark.kubernetes.driver.request.cores': '1',
-        'spark.kubernetes.driver.limit.cores': '2',
-        'spark.kubernetes.driver.request.memory': '2g',
-        'spark.kubernetes.executor.request.cores': '2',
-        'spark.kubernetes.executor.limit.cores': '4',
-        'spark.kubernetes.executor.request.memory': '4g',
-    },
-    
-    # Pod cleanup
-    executor_pod_cleanup_policy='OnSuccess',  # or 'OnFailure', 'Never'
-    
-    application_args=['--mode', 'production'],
-    conn_id='spark_k8s',
-    dag=dag,
-)
-```
-
-### Kubernetes-Specific Parameters
-
-- **namespace** (required): Kubernetes namespace for Spark resources
-- **kubernetes_service_account**: Service account for driver/executor pods
-- **image**: Docker image for Spark containers
-- **driver_pod_template**: Path to driver pod template YAML
-- **executor_pod_template**: Path to executor pod template YAML
-- **executor_pod_cleanup_policy**: 'OnSuccess', 'OnFailure', or 'Never'
-
-### Pod Templates
-
-Use pod templates for advanced configuration:
-
-```python
-k8s_task = SparkKubernetesOperator(
-    task_id='custom_pods',
-    application='/apps/my_app.py',
-    namespace='spark-jobs',
-    driver_pod_template='/config/driver-template.yaml',
-    executor_pod_template='/config/executor-template.yaml',
-    dag=dag,
-)
-```
-
-## Common Patterns
-
-### 1. Job Chaining
-
-Run multiple Spark jobs in sequence:
-
-```python
-job1 = SparkStandaloneOperator(
-    task_id='extract_data',
-    application='/apps/extract.py',
-    master='spark://master:7077',
-    dag=dag,
-)
-
-job2 = SparkStandaloneOperator(
-    task_id='transform_data',
-    application='/apps/transform.py',
-    master='spark://master:7077',
-    dag=dag,
-)
-
-job1 >> job2
-```
-
-### 2. Parallel Processing
-
-Run independent jobs in parallel:
-
-```python
-jobs = []
-for region in ['us-east', 'us-west', 'eu']:
-    job = SparkStandaloneOperator(
-        task_id=f'process_{region}',
-        application='/apps/process_region.py',
-        application_args=['--region', region],
-        master='spark://master:7077',
-        dag=dag,
-    )
-    jobs.append(job)
-
-start >> jobs >> aggregate
-```
-
-### 3. Multi-Cluster Deployment
-
-Use different clusters for different workloads:
-
-```python
-# Development: Standalone
-dev_job = SparkStandaloneOperator(
-    task_id='dev_job',
-    application='/apps/test.py',
-    master='spark://dev-master:7077',
-    dag=dag,
-)
-
-# Production: YARN
-prod_job = SparkYarnOperator(
-    task_id='prod_job',
-    application='/apps/production.py',
-    queue='production',
+    application_file='/opt/airflow/spark_jobs/process_dataset.py',
+    spark_master='yarn',
     deploy_mode='cluster',
-    dag=dag,
-)
-```
-
-### 4. Resource Tuning
-
-Adjust resources based on data volume:
-
-```python
-# Small dataset
-small_job = SparkStandaloneOperator(
-    task_id='small_processing',
-    application='/apps/process.py',
-    executor_memory='1g',
-    executor_cores='1',
-    num_executors='2',
-    dag=dag,
-)
-
-# Large dataset
-large_job = SparkStandaloneOperator(
-    task_id='large_processing',
-    application='/apps/process.py',
+    yarn_queue='data-engineering',
+    num_executors=10,
+    executor_cores=4,
     executor_memory='8g',
-    executor_cores='4',
-    num_executors='20',
-    conf={'spark.sql.shuffle.partitions': '200'},
-    dag=dag,
-)
-```
-
-## Error Handling
-
-### Retry Configuration
-
-Combine with retry policies:
-
-```python
-from src.utils.retry_policies import create_retry_config
-
-retry_config = create_retry_config(
-    max_retries=2,
-    strategy='exponential',
-    base_delay=120,
-)
-
-spark_job = SparkStandaloneOperator(
-    task_id='resilient_job',
-    application='/apps/my_app.py',
-    master='spark://master:7077',
-    retries=retry_config['retries'],
-    retry_delay=retry_config['retry_delay'],
-    dag=dag,
-)
-```
-
-### Timeout Management
-
-Set execution timeout:
-
-```python
-from datetime import timedelta
-
-spark_job = SparkStandaloneOperator(
-    task_id='long_job',
-    application='/apps/batch_process.py',
-    master='spark://master:7077',
-    execution_timeout=timedelta(hours=2),
-    dag=dag,
-)
-```
-
-### Failure Handling
-
-Use trigger rules for compensation:
-
-```python
-from airflow.utils.trigger_rule import TriggerRule
-from airflow.operators.python import PythonOperator
-
-cleanup = PythonOperator(
-    task_id='cleanup_on_failure',
-    python_callable=cleanup_temp_data,
-    trigger_rule=TriggerRule.ONE_FAILED,
-    dag=dag,
-)
-
-spark_job >> cleanup
-```
-
-## Monitoring and Debugging
-
-### XCom Integration
-
-Access job IDs for monitoring:
-
-```python
-def check_job_status(**context):
-    job_id = context['task_instance'].xcom_pull(
-        task_ids='spark_job',
-        key='spark_job_id'
-    )
-    print(f"Spark job ID: {job_id}")
-```
-
-### Log Retrieval
-
-Logs are automatically captured and available in Airflow task logs.
-
-### Spark UI
-
-Access Spark UI for detailed monitoring:
-- Standalone: http://spark-master:8080
-- YARN: YARN Resource Manager UI
-- Kubernetes: Use kubectl logs or K8s dashboard
-
-## Performance Optimization
-
-### Memory Management
-
-```python
-conf={
-    # Driver memory
-    'spark.driver.memory': '4g',
-    'spark.driver.maxResultSize': '2g',
-    
-    # Executor memory
-    'spark.executor.memory': '8g',
-    'spark.executor.memoryOverhead': '1g',
-    
-    # Memory fractions
-    'spark.memory.fraction': '0.8',
-    'spark.memory.storageFraction': '0.3',
-}
-```
-
-### Shuffle Optimization
-
-```python
-conf={
-    # Shuffle partitions
-    'spark.sql.shuffle.partitions': '200',  # Adjust based on data size
-    
-    # Shuffle behavior
-    'spark.shuffle.compress': 'true',
-    'spark.shuffle.spill.compress': 'true',
-    
-    # Shuffle service (YARN/K8s)
-    'spark.shuffle.service.enabled': 'true',
-}
-```
-
-### Parallelism
-
-```python
-conf={
-    # Default parallelism
-    'spark.default.parallelism': '100',
-    
-    # SQL partitions
-    'spark.sql.shuffle.partitions': '100',
-    
-    # Task execution
-    'spark.task.cpus': '1',
-    'spark.executor.cores': '4',
-}
-```
-
-## Security
-
-### Kerberos (YARN)
-
-```python
-conf={
-    'spark.yarn.keytab': '/path/to/keytab',
-    'spark.yarn.principal': 'spark@REALM',
-}
-```
-
-### Kubernetes RBAC
-
-```python
-k8s_task = SparkKubernetesOperator(
-    task_id='secure_job',
-    kubernetes_service_account='spark-privileged',
+    driver_memory='4g',
+    application_args=[
+        '--date', '{{ ds }}',
+        '--table', 'warehouse.fact_transactions'
+    ],
     conf={
-        'spark.kubernetes.authenticate.driver.serviceAccountName': 'spark-privileged',
-    },
-    dag=dag,
+        'spark.yarn.maxAppAttempts': '2',
+        'spark.dynamicAllocation.enabled': 'true'
+    }
 )
 ```
 
-## Best Practices
+#### YARN-Specific Features
 
-1. **Use appropriate cluster type**:
-   - Development: Standalone
-   - Production (on-premise): YARN
-   - Production (cloud): Kubernetes
-
-2. **Set resource limits**:
-   - Prevent resource starvation
-   - Use dynamic allocation for variable workloads
-
-3. **Enable monitoring**:
-   - Spark UI for job details
-   - Airflow logs for orchestration
-   - Metrics collection for performance
-
-4. **Implement retry logic**:
-   - Use exponential backoff
-   - Set reasonable max retries (2-3)
-
-5. **Configure timeouts**:
-   - Prevent hung jobs
-   - Set based on expected runtime + buffer
-
-6. **Test locally first**:
-   - Use Standalone cluster for development
-   - Validate on larger clusters for production
-
-7. **Version control Spark apps**:
-   - Treat Spark applications as code
-   - Use Git for version management
-
-## Example DAGs
-
-- **Intermediate**: `dags/examples/intermediate/demo_spark_standalone_v1.py`
-- **Advanced**: `dags/examples/advanced/demo_spark_multi_cluster_v1.py`
-
-## Troubleshooting
-
-### Job submission fails
-
-**Check**:
-- Spark cluster is running
-- Airflow connection configured correctly
-- Network connectivity from Airflow to cluster
-- Application path is accessible
-
-### Jobs hang indefinitely
-
-**Solutions**:
-- Set execution_timeout
-- Check Spark UI for blocked stages
-- Verify resource availability
-- Check for data skew
-
-### Out of memory errors
-
-**Solutions**:
-- Increase executor memory
-- Adjust memory fractions
-- Repartition data
-- Enable dynamic allocation
-
-### Slow performance
-
-**Solutions**:
-- Optimize shuffle partitions
-- Check data locality
-- Enable compression
-- Review execution plan in Spark UI
+- **Dynamic Allocation**: Automatically scales executors based on workload
+- **Queue Management**: Submit to specific YARN queues for resource isolation
+- **Cluster Mode**: Driver runs on YARN cluster (recommended for production)
 
 ---
 
-## Multi-Channel Notification Operators
+### SparkKubernetesOperator
 
-The platform provides custom operators for sending notifications via email, Microsoft Teams, and Telegram with support for template rendering, retry logic, and error handling.
+Submits Spark jobs to Kubernetes using Spark's native Kubernetes executor.
 
-### Email Notifications
+#### Parameters
 
-Send email notifications via SMTP with HTML/plain text support.
+Inherits all parameters from `SparkStandaloneOperator`, plus:
 
-**Operator**: `EmailNotificationOperator`
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `k8s_namespace` | `str` | No | `'spark'` | Kubernetes namespace |
+| `service_account` | `str` | No | `'spark'` | K8s service account for pods |
+| `image` | `str` | No | `'apache/spark:3.5.0'` | Docker image for driver/executor |
+| `image_pull_policy` | `str` | No | `'IfNotPresent'` | Image pull policy |
 
-**Basic Usage**:
+#### Usage Example
 
 ```python
-from src.operators.notifications.email_operator import EmailNotificationOperator
+from src.operators.spark import SparkKubernetesOperator
 
-send_email = EmailNotificationOperator(
-    task_id="send_success_email",
-    to="admin@example.com",
-    subject="Pipeline {{ dag.dag_id }} completed",
-    message_template="""
-    Pipeline execution completed successfully!
-
-    DAG: {{ dag.dag_id }}
-    Date: {{ ds }}
-    Run ID: {{ run_id }}
-    """,
-    smtp_host="smtp.gmail.com",
-    smtp_port=587,
-    smtp_user="{{ var.value.smtp_user }}",
-    smtp_password="{{ var.value.smtp_password }}",
+ml_training = SparkKubernetesOperator(
+    task_id='ml_model_training',
+    application_file='/opt/airflow/spark_jobs/train_model.py',
+    spark_master='k8s://https://kubernetes.default.svc:443',
+    k8s_namespace='ml-workloads',
+    service_account='spark-ml',
+    image='myregistry/spark-ml:3.5.0-cuda',
+    num_executors=20,
+    executor_cores=4,
+    executor_memory='16g',
+    driver_memory='8g',
+    application_args=['--model', 'xgboost', '--iterations', '100'],
+    conf={
+        'spark.kubernetes.executor.request.cores': '3.5',
+        'spark.kubernetes.executor.limit.cores': '4',
+        'spark.kubernetes.executor.podTemplateFile': '/path/to/executor-template.yaml'
+    }
 )
 ```
 
-**Parameters**:
+#### Kubernetes-Specific Features
 
-- `to` (str | list): Recipient email address(es)
-- `subject` (str): Email subject (supports Jinja2 templates)
-- `message_template` (str): Email body (supports Jinja2 templates)
-- `from_email` (str, optional): Sender email address
-- `cc` (str | list, optional): CC recipients
-- `bcc` (str | list, optional): BCC recipients
-- `html` (bool): Send as HTML email (default: False)
-- `smtp_host` (str): SMTP server hostname
-- `smtp_port` (int): SMTP port (default: 587 for TLS)
-- `smtp_user` (str, optional): SMTP authentication username
-- `smtp_password` (str, optional): SMTP authentication password
-- `use_ssl` (bool): Use SSL instead of TLS for port 465 (default: False)
+- **Dynamic Pod Creation**: Creates driver and executor pods on-demand
+- **Auto-scaling**: Leverages K8s horizontal pod autoscaling
+- **Resource Quotas**: Respects K8s namespace resource limits
+- **Pod Templates**: Custom pod configurations via YAML templates
 
-**HTML Email Example**:
+---
+
+## Data Quality Operators
+
+All quality operators extend `DataQualityCheckOperator` and support configurable severity levels.
+
+### Severity Levels
+
+| Level | Behavior | Use Case |
+|-------|----------|----------|
+| `INFO` | Log result, continue | Informational checks |
+| `WARNING` | Log warning, continue | Non-critical issues |
+| `CRITICAL` | Fail task immediately | Data integrity violations |
+
+### SchemaValidationOperator
+
+Validates that a table schema matches expected structure.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `table_name` | `str` | Yes | - | Table to validate |
+| `expected_schema` | `Dict` | Yes | - | Expected schema definition |
+| `postgres_conn_id` | `str` | No | `'warehouse'` | Airflow connection ID |
+| `severity` | `str` | No | `'CRITICAL'` | Severity level |
+
+#### Expected Schema Format
 
 ```python
-send_html_email = EmailNotificationOperator(
-    task_id="send_html_report",
-    to=["team@example.com", "manager@example.com"],
-    subject="Daily Report - {{ ds }}",
-    message_template="""
-    <html>
-    <body>
-        <h1>Daily Pipeline Report</h1>
-        <p><strong>DAG:</strong> {{ dag.dag_id }}</p>
-        <p><strong>Date:</strong> {{ ds }}</p>
-        <p><strong>Status:</strong> <span style="color: green;">SUCCESS</span></p>
-    </body>
-    </html>
-    """,
-    html=True,
-    smtp_host="smtp.gmail.com",
-    smtp_port=587,
+expected_schema = {
+    "columns": [
+        {"name": "customer_id", "type": "integer", "nullable": False},
+        {"name": "email", "type": "varchar", "nullable": False},
+        {"name": "created_at", "type": "timestamp", "nullable": True}
+    ]
+}
+```
+
+#### Usage Example
+
+```python
+from src.operators.quality import SchemaValidationOperator
+
+validate_customer_schema = SchemaValidationOperator(
+    task_id='validate_customer_schema',
+    table_name='warehouse.dim_customer',
+    expected_schema={
+        "columns": [
+            {"name": "customer_id", "type": "integer", "nullable": False},
+            {"name": "customer_name", "type": "varchar", "nullable": False},
+            {"name": "email", "type": "varchar", "nullable": False},
+            {"name": "phone", "type": "varchar", "nullable": True},
+            {"name": "created_at", "type": "timestamp", "nullable": False}
+        ]
+    },
+    postgres_conn_id='warehouse',
+    severity='CRITICAL'
 )
 ```
 
-**Email Validation**:
-- All email addresses are validated for correct format
-- Invalid emails will raise `ValueError` during DAG parsing
+#### Checks Performed
 
-### Microsoft Teams Notifications
+1. All expected columns exist
+2. Column data types match
+3. Nullable constraints are correct
+4. No unexpected extra columns (optional)
 
-Send rich message cards to Microsoft Teams channels via incoming webhooks.
+---
 
-**Operator**: `TeamsNotificationOperator`
+### CompletenessCheckOperator
 
-**Basic Usage**:
+Validates that required columns have values (no nulls).
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `table_name` | `str` | Yes | - | Table to check |
+| `required_columns` | `List[str]` | Yes | - | Columns that must be non-null |
+| `threshold` | `float` | No | `0.0` | Max allowed null rate (0.0 = 0%, 1.0 = 100%) |
+| `postgres_conn_id` | `str` | No | `'warehouse'` | Airflow connection ID |
+| `severity` | `str` | No | `'CRITICAL'` | Severity level |
+
+#### Usage Example
 
 ```python
-from src.operators.notifications.teams_operator import TeamsNotificationOperator
+from src.operators.quality import CompletenessCheckOperator
 
-send_teams = TeamsNotificationOperator(
-    task_id="send_teams_notification",
-    webhook_url="{{ var.value.teams_webhook_url }}",
-    message_template="Pipeline {{ dag.dag_id }} completed successfully!",
-    title="✅ Pipeline Success",
-    theme_color="00FF00",  # Green
+check_sales_completeness = CompletenessCheckOperator(
+    task_id='check_sales_completeness',
+    table_name='warehouse.fact_sales',
+    required_columns=['customer_id', 'product_id', 'sale_date', 'sale_amount'],
+    threshold=0.01,  # Allow up to 1% nulls
+    postgres_conn_id='warehouse',
+    severity='CRITICAL'
 )
 ```
 
-**Parameters**:
-
-- `webhook_url` (str): Teams incoming webhook URL (must start with https://)
-- `message_template` (str): Message text (supports Jinja2 templates and Markdown)
-- `title` (str, optional): Message card title (default: "Airflow Notification")
-- `theme_color` (str, optional): Hex color code without # (default: "0078D4")
-- `facts` (list, optional): List of key-value pairs for facts section
-- `actions` (list, optional): List of action buttons with URIs
-- `timeout` (int): Request timeout in seconds (default: 30)
-
-**Advanced Example with Facts and Actions**:
+#### Output
 
 ```python
-send_teams_detailed = TeamsNotificationOperator(
-    task_id="send_teams_detailed",
-    webhook_url="{{ var.value.teams_webhook_url }}",
-    message_template="""
-    Pipeline execution completed successfully.
+# XCom result
+{
+    "check": "completeness",
+    "table": "warehouse.fact_sales",
+    "columns_checked": ["customer_id", "product_id", "sale_date", "sale_amount"],
+    "null_counts": {
+        "customer_id": 0,
+        "product_id": 5,
+        "sale_date": 0,
+        "sale_amount": 2
+    },
+    "total_rows": 10000,
+    "null_rate": 0.0007,  # 0.07%
+    "passed": True
+}
+```
 
-    **Summary:**
-    - All quality checks passed
-    - 10,000 records processed
-    - Duration: 5 minutes
-    """,
-    title="📊 {{ dag.dag_id }} - Success",
-    theme_color="00FF00",
-    facts=[
-        {"name": "DAG ID", "value": "{{ dag.dag_id }}"},
-        {"name": "Execution Date", "value": "{{ ds }}"},
-        {"name": "Duration", "value": "{{ (task_instance.end_date - task_instance.start_date).total_seconds() if task_instance.end_date else 'N/A' }}s"},
-        {"name": "State", "value": "{{ task_instance.state|upper }}"},
-    ],
-    actions=[
-        {
-            "@type": "OpenUri",
-            "name": "View in Airflow",
-            "targets": [{"os": "default", "uri": "http://localhost:8080/dags/{{ dag.dag_id }}"}]
-        }
-    ],
+---
+
+### FreshnessCheckOperator
+
+Validates that data is recent based on a timestamp column.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `table_name` | `str` | Yes | - | Table to check |
+| `timestamp_column` | `str` | Yes | - | Column with timestamp values |
+| `max_age_hours` | `int` | No | `24` | Maximum allowed age in hours |
+| `postgres_conn_id` | `str` | No | `'warehouse'` | Airflow connection ID |
+| `severity` | `str` | No | `'WARNING'` | Severity level |
+
+#### Usage Example
+
+```python
+from src.operators.quality import FreshnessCheckOperator
+
+check_data_freshness = FreshnessCheckOperator(
+    task_id='check_data_freshness',
+    table_name='warehouse.staging_customer_events',
+    timestamp_column='event_timestamp',
+    max_age_hours=6,  # Data should be less than 6 hours old
+    postgres_conn_id='warehouse',
+    severity='WARNING'
 )
 ```
 
-**Theme Colors**:
-- Success: `00FF00` (Green)
-- Warning: `FFA500` (Orange)
-- Error: `FF0000` (Red)
-- Info: `0078D4` (Microsoft Blue)
+#### Behavior
 
-### Telegram Notifications
+- Queries `MAX(timestamp_column)` from table
+- Compares to current time
+- Fails if data is older than `max_age_hours`
 
-Send notifications via Telegram Bot API with Markdown/HTML formatting support.
+---
 
-**Operator**: `TelegramNotificationOperator`
+### UniquenessCheckOperator
 
-**Basic Usage**:
+Validates that specified columns have unique values (no duplicates).
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `table_name` | `str` | Yes | - | Table to check |
+| `unique_columns` | `List[str]` | Yes | - | Columns that should be unique |
+| `threshold` | `float` | No | `0.0` | Max allowed duplicate rate |
+| `postgres_conn_id` | `str` | No | `'warehouse'` | Airflow connection ID |
+| `severity` | `str` | No | `'CRITICAL'` | Severity level |
+
+#### Usage Example
 
 ```python
-from src.operators.notifications.telegram_operator import TelegramNotificationOperator
+from src.operators.quality import UniquenessCheckOperator
 
-send_telegram = TelegramNotificationOperator(
-    task_id="send_telegram_notification",
-    bot_token="{{ var.value.telegram_bot_token }}",
-    chat_id="{{ var.value.telegram_chat_id }}",
-    message_template="Pipeline *{{ dag.dag_id }}* completed!",
-    parse_mode="Markdown",
+check_customer_uniqueness = UniquenessCheckOperator(
+    task_id='check_customer_uniqueness',
+    table_name='warehouse.dim_customer',
+    unique_columns=['customer_id'],
+    threshold=0.0,  # No duplicates allowed
+    postgres_conn_id='warehouse',
+    severity='CRITICAL'
 )
 ```
 
-**Parameters**:
-
-- `bot_token` (str): Telegram Bot API token (format: "123456:ABC-DEF...")
-- `chat_id` (str): Telegram chat ID (user ID or group chat ID with -)
-- `message_template` (str): Message text (supports Jinja2 templates)
-- `parse_mode` (str, optional): "Markdown", "HTML", or None
-- `disable_notification` (bool): Send silently without sound (default: False)
-- `disable_web_page_preview` (bool): Disable link previews (default: False)
-- `timeout` (int): Request timeout in seconds (default: 30)
-
-**Markdown Formatting Example**:
+#### Composite Uniqueness
 
 ```python
-send_telegram_markdown = TelegramNotificationOperator(
-    task_id="send_telegram_markdown",
-    bot_token="{{ var.value.telegram_bot_token }}",
-    chat_id="{{ var.value.telegram_chat_id }}",
-    message_template="""
-*Pipeline Success* ✅
-
-*DAG:* `{{ dag.dag_id }}`
-*Date:* {{ ds }}
-*Run ID:* `{{ run_id }}`
-
-_All tasks completed successfully!_
-    """,
-    parse_mode="Markdown",
+# Check uniqueness of combination of columns
+check_sales_uniqueness = UniquenessCheckOperator(
+    task_id='check_sales_uniqueness',
+    table_name='warehouse.fact_sales',
+    unique_columns=['customer_id', 'product_id', 'sale_date'],  # Composite key
+    threshold=0.0,
+    severity='CRITICAL'
 )
 ```
 
-**HTML Formatting Example**:
+---
+
+### NullRateCheckOperator
+
+Validates that null rate for columns is within acceptable threshold.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `table_name` | `str` | Yes | - | Table to check |
+| `columns` | `List[str]` | Yes | - | Columns to check |
+| `max_null_rate` | `float` | No | `0.05` | Max null rate (5% default) |
+| `postgres_conn_id` | `str` | No | `'warehouse'` | Airflow connection ID |
+| `severity` | `str` | No | `'WARNING'` | Severity level |
+
+#### Usage Example
 
 ```python
-send_telegram_html = TelegramNotificationOperator(
-    task_id="send_telegram_html",
-    bot_token="{{ var.value.telegram_bot_token }}",
-    chat_id="{{ var.value.telegram_chat_id }}",
-    message_template="""
-<b>Pipeline Failure</b> ❌
+from src.operators.quality import NullRateCheckOperator
 
-<b>DAG:</b> <code>{{ dag.dag_id }}</code>
-<b>Task:</b> <code>{{ task.task_id }}</code>
-<b>Error:</b> <i>{{ exception if exception is defined else 'Unknown error' }}</i>
-
-<a href="http://localhost:8080/dags/{{ dag.dag_id }}">View in Airflow</a>
-    """,
-    parse_mode="HTML",
+check_null_rates = NullRateCheckOperator(
+    task_id='check_null_rates',
+    table_name='warehouse.dim_product',
+    columns=['product_name', 'category', 'price'],
+    max_null_rate=0.02,  # Allow up to 2% nulls
+    postgres_conn_id='warehouse',
+    severity='WARNING'
 )
 ```
 
-**Silent Notification** (for non-critical alerts):
+---
+
+## Notification Operators
+
+### EmailNotificationOperator
+
+Sends email notifications via SMTP.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `to` | `str` or `List[str]` | Yes | - | Recipient email address(es) |
+| `subject` | `str` | Yes | - | Email subject (supports Jinja templates) |
+| `body` | `str` | Yes | - | Email body (HTML or plain text) |
+| `cc` | `str` or `List[str]` | No | `None` | CC recipients |
+| `bcc` | `str` or `List[str]` | No | `None` | BCC recipients |
+| `email_conn_id` | `str` | No | `'smtp_default'` | Airflow SMTP connection ID |
+| `html` | `bool` | No | `True` | Send as HTML email |
+
+#### Usage Example
 
 ```python
-send_telegram_silent = TelegramNotificationOperator(
-    task_id="send_telegram_silent",
-    bot_token="{{ var.value.telegram_bot_token }}",
-    chat_id="{{ var.value.telegram_chat_id }}",
-    message_template="Background job completed.",
-    disable_notification=True,  # No sound
-)
-```
+from src.operators.notifications import EmailNotificationOperator
 
-### Notification Templates
-
-Use pre-defined templates for common scenarios.
-
-**Available Templates**:
-
-```python
-from src.utils.notification_templates import get_template, NOTIFICATION_TEMPLATES
-
-# Success templates
-success_simple = get_template("success", "simple")
-success_detailed = get_template("success", "detailed")
-
-# Failure templates
-failure_simple = get_template("failure", "simple")
-failure_detailed = get_template("failure", "detailed")
-
-# Data quality templates
-data_quality_warning = get_template("data_quality", "warning")
-data_quality_critical = get_template("data_quality", "critical")
-
-# Spark job templates
-spark_success = get_template("spark", "success")
-spark_failure = get_template("spark", "failure")
-```
-
-**Using Templates in Operators**:
-
-```python
 send_success_email = EmailNotificationOperator(
-    task_id="send_success_email",
-    to="admin@example.com",
-    subject="Pipeline Success - {{ dag.dag_id }}",
-    message_template=get_template("success", "detailed"),
-    smtp_host="smtp.gmail.com",
-    smtp_port=587,
+    task_id='send_success_email',
+    to=['data-team@example.com', 'manager@example.com'],
+    subject='ETL Pipeline {{ dag.dag_id }} Completed Successfully',
+    body='''
+    <h2>Pipeline Execution Report</h2>
+    <p><strong>DAG:</strong> {{ dag.dag_id }}</p>
+    <p><strong>Execution Date:</strong> {{ ds }}</p>
+    <p><strong>Status:</strong> SUCCESS</p>
+    <p><strong>Duration:</strong> {{ ti.duration }} seconds</p>
+
+    <h3>Summary</h3>
+    <ul>
+        <li>Records Processed: {{ ti.xcom_pull(task_ids='extract_data')['row_count'] }}</li>
+        <li>Quality Checks: PASSED</li>
+    </ul>
+    ''',
+    cc='stakeholders@example.com',
+    html=True
 )
 ```
 
-### Common Patterns
+#### Email Templates
 
-#### Success Notification
+For reusable templates, store in `dags/templates/emails/`:
 
 ```python
-# Send notification on successful DAG run
-send_success_notification = EmailNotificationOperator(
-    task_id="send_success_notification",
-    to="team@example.com",
-    subject="✅ {{ dag.dag_id }} - Success",
-    message_template=get_template("success", "detailed"),
-    trigger_rule="all_success",  # Only run if all upstream tasks succeed
+send_email = EmailNotificationOperator(
+    task_id='send_email',
+    to='team@example.com',
+    subject='Pipeline Report',
+    body='{{ dag.get_template("email_report.html").render(context) }}'
 )
-
-# Place at end of DAG
-all_tasks >> send_success_notification
 ```
 
-#### Failure Notification
+---
+
+### MSTeamsNotificationOperator
+
+Sends notifications to Microsoft Teams via webhooks.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `message` | `str` | Yes | - | Message text (Markdown supported) |
+| `title` | `str` | No | `None` | Card title |
+| `webhook_url` | `str` | No | - | Teams webhook URL (or use connection) |
+| `teams_conn_id` | `str` | No | `'teams_default'` | Airflow connection ID |
+| `color` | `str` | No | `'0078D7'` | Theme color (hex code) |
+
+#### Usage Example
 
 ```python
-# Send notification on any task failure
-send_failure_notification = TeamsNotificationOperator(
-    task_id="send_failure_notification",
-    webhook_url="{{ var.value.teams_webhook_url }}",
-    message_template=get_template("failure", "detailed"),
-    title="❌ {{ dag.dag_id }} - Failed",
-    theme_color="FF0000",  # Red
-    trigger_rule="one_failed",  # Run if any upstream task fails
+from src.operators.notifications import MSTeamsNotificationOperator
+
+notify_teams = MSTeamsNotificationOperator(
+    task_id='notify_teams',
+    title='🚀 ETL Pipeline Completed',
+    message='''
+    **DAG:** `{{ dag.dag_id }}`
+    **Date:** {{ ds }}
+    **Status:** SUCCESS ✅
+
+    **Metrics:**
+    - Records: {{ ti.xcom_pull(task_ids='transform')['record_count'] }}
+    - Duration: {{ ti.duration }}s
+    ''',
+    teams_conn_id='teams_data_engineering',
+    color='00FF00'  # Green for success
 )
-
-# Add as final task with trigger_rule
-all_tasks >> send_failure_notification
-```
-
-#### Multi-Channel Notifications
-
-```python
-# Send to all channels in parallel
-from airflow.operators.python import BranchPythonOperator
-
-send_email = EmailNotificationOperator(...)
-send_teams = TeamsNotificationOperator(...)
-send_telegram = TelegramNotificationOperator(...)
-
-# All notifications run in parallel after task completes
-task >> [send_email, send_teams, send_telegram]
 ```
 
 #### Conditional Notifications
 
 ```python
-# Only send if threshold exceeded
-def check_threshold(**context):
-    ti = context['task_instance']
-    count = ti.xcom_pull(task_ids='count_records')
-    if count > 1000:
-        return 'send_notification'
-    else:
-        return 'skip_notification'
+from airflow.operators.python import BranchPythonOperator
 
-check = BranchPythonOperator(
-    task_id='check_threshold',
-    python_callable=check_threshold,
+def decide_notification(**context):
+    task_instance = context['task_instance']
+    state = task_instance.state
+    return 'notify_teams_success' if state == 'success' else 'notify_teams_failure'
+
+branch = BranchPythonOperator(
+    task_id='decide_notification',
+    python_callable=decide_notification
 )
 
-send_notification = TelegramNotificationOperator(
-    task_id='send_notification',
-    bot_token="{{ var.value.telegram_bot_token }}",
-    chat_id="{{ var.value.telegram_chat_id }}",
-    message_template="High record count detected: {{ ti.xcom_pull('count_records') }}",
+notify_success = MSTeamsNotificationOperator(
+    task_id='notify_teams_success',
+    title='Success',
+    message='Pipeline completed',
+    color='00FF00'
 )
 
-count_records >> check >> send_notification
+notify_failure = MSTeamsNotificationOperator(
+    task_id='notify_teams_failure',
+    title='Failure',
+    message='Pipeline failed',
+    color='FF0000'
+)
+
+branch >> [notify_success, notify_failure]
 ```
 
-### Configuration
+---
 
-Store sensitive credentials in Airflow Variables:
+### TelegramNotificationOperator
 
-**Via Airflow UI**:
-Admin → Variables → Add
+Sends notifications to Telegram via Bot API.
 
-**Via CLI**:
+#### Parameters
 
-```bash
-# Email
-airflow variables set smtp_host "smtp.gmail.com"
-airflow variables set smtp_user "notifications@company.com"
-airflow variables set smtp_password "app-specific-password"
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `message` | `str` | Yes | - | Message text (Markdown or HTML) |
+| `chat_id` | `str` | No | - | Telegram chat ID |
+| `telegram_conn_id` | `str` | No | `'telegram_default'` | Airflow connection ID |
+| `parse_mode` | `str` | No | `'Markdown'` | Parse mode (`Markdown` or `HTML`) |
 
-# Teams
-airflow variables set teams_webhook_url "https://outlook.office.com/webhook/abc123..."
-
-# Telegram
-airflow variables set telegram_bot_token "123456:ABC-DEF..."
-airflow variables set telegram_chat_id "-1001234567890"
-```
-
-### Error Handling
-
-All notification operators include:
-- **Automatic retries** with configurable delays
-- **Timeout enforcement** to prevent hanging
-- **Structured error logging** with full context
-- **Graceful degradation** (logs errors without failing DAG)
-
-**Retry Configuration**:
+#### Usage Example
 
 ```python
-send_email = EmailNotificationOperator(
-    task_id="send_email",
-    to="admin@example.com",
-    subject="Test",
-    message_template="Test message",
-    retries=3,
-    retry_delay=timedelta(minutes=2),
-    retry_exponential_backoff=True,  # 2min → 4min → 8min
+from src.operators.notifications import TelegramNotificationOperator
+
+alert_telegram = TelegramNotificationOperator(
+    task_id='alert_telegram',
+    message='''
+    🔴 *CRITICAL ALERT*
+
+    *Pipeline:* `{{ dag.dag_id }}`
+    *Task:* `{{ task.task_id }}`
+    *Status:* FAILED
+
+    *Error:* {{ ti.xcom_pull(task_ids='failing_task')['error'] }}
+
+    Action required immediately!
+    ''',
+    telegram_conn_id='telegram_oncall',
+    parse_mode='Markdown'
 )
 ```
 
-### Best Practices
+#### Setup Telegram Connection
 
-1. **Use Airflow Variables for credentials** (never hardcode)
-2. **Set appropriate trigger rules** (`all_success`, `one_failed`, `all_done`)
-3. **Keep messages concise** (especially for Telegram - 4096 char limit)
-4. **Use templates** for consistent messaging
-5. **Test notifications** with dummy values first
-6. **Add retries** for transient network errors
-7. **Set timeouts** to prevent hanging tasks
-8. **Include context** in messages (DAG ID, date, run ID)
-9. **Use appropriate severity colors** (green for success, red for failure)
-10. **Monitor notification delivery** in task logs
+In Airflow UI:
+1. Go to **Admin → Connections**
+2. Create new connection:
+   - **Conn ID**: `telegram_default`
+   - **Conn Type**: `HTTP`
+   - **Host**: `https://api.telegram.org`
+   - **Password**: `<bot_token>` (from BotFather)
+   - **Extra**: `{"chat_id": "<your_chat_id>"}`
 
-### Troubleshooting
+---
 
-**Email not sending**:
-- Check SMTP credentials and host
-- Verify port (587 for TLS, 465 for SSL)
-- Check firewall/network rules
-- Enable "less secure apps" for Gmail (or use app password)
-- Review task logs for specific errors
+## Best Practices
 
-**Teams notification fails**:
-- Verify webhook URL is correct
-- Check webhook has not been deleted in Teams
-- Ensure message card JSON is valid
-- Review HTTP response code in logs
+### 1. Use Task Retries with Exponential Backoff
 
-**Telegram notification fails**:
-- Verify bot token format (contains colon)
-- Check chat ID is correct
-- Ensure bot has been added to group (for group chats)
-- Check message length < 4096 characters
-- Review Telegram API error codes in logs
+```python
+from datetime import timedelta
 
-**Template rendering errors**:
-- Check Jinja2 syntax (proper `{{ }}` usage)
-- Verify context variables exist
-- Test templates with simple values first
-- Review template error messages in logs
+default_args = {
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5),
+    'retry_exponential_backoff': True,
+    'max_retry_delay': timedelta(hours=1)
+}
+```
 
-## Additional Resources
+### 2. Set Appropriate Timeouts
 
-- [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
-- [Spark Configuration Reference](https://spark.apache.org/docs/latest/configuration.html)
-- [Spark on Kubernetes Guide](https://spark.apache.org/docs/latest/running-on-kubernetes.html)
-- [Microsoft Teams Webhooks](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook)
-- [Telegram Bot API](https://core.telegram.org/bots/api)
-- [Development Guide](./development.md)
-- [Docker Spark Setup](../docker/spark/README.md)
-- [Example DAG: Notification Basics](../dags/examples/beginner/demo_notification_basics_v1.py)
+```python
+# Spark job with 2-hour timeout
+spark_task = SparkStandaloneOperator(
+    task_id='long_running_job',
+    application_file='/path/to/job.py',
+    spark_master='spark://master:7077',
+    timeout=7200,  # 2 hours
+    execution_timeout=timedelta(hours=2.5)  # Airflow-level timeout
+)
+```
+
+### 3. Use XCom for Metadata, Not Large Data
+
+```python
+# ✅ Good: Store metadata
+def extract_data(**context):
+    # ... extract logic ...
+    return {
+        "row_count": 1000000,
+        "file_path": "s3://bucket/data.parquet",
+        "extraction_time": "2025-01-01T10:30:00Z"
+    }
+
+# ❌ Bad: Store large datasets
+def extract_data(**context):
+    df = pd.read_csv(...)  # Large DataFrame
+    return df.to_dict()  # Don't do this!
+```
+
+### 4. Chain Quality Checks
+
+```python
+from airflow.models import TaskGroup
+
+with TaskGroup(group_id='quality_checks') as quality_group:
+    schema_check = SchemaValidationOperator(...)
+    completeness_check = CompletenessCheckOperator(...)
+    freshness_check = FreshnessCheckOperator(...)
+
+    # All quality checks run in parallel
+    [schema_check, completeness_check, freshness_check]
+
+# Then proceed with next step
+extract >> transform >> quality_group >> load
+```
+
+### 5. Severity-Based Workflows
+
+```python
+# CRITICAL failures stop the pipeline
+critical_check = SchemaValidationOperator(
+    task_id='critical_schema_check',
+    table_name='warehouse.fact_sales',
+    expected_schema={...},
+    severity='CRITICAL'  # Will fail task if check fails
+)
+
+# WARNING allows pipeline to continue
+warning_check = NullRateCheckOperator(
+    task_id='warning_null_check',
+    table_name='warehouse.dim_product',
+    columns=['description'],
+    max_null_rate=0.10,
+    severity='WARNING'  # Logs warning, continues
+)
+
+critical_check >> warning_check >> load_data
+```
+
+### 6. Notification Patterns
+
+```python
+# On-success callback
+def on_success_callback(context):
+    EmailNotificationOperator(
+        task_id='success_email',
+        to='team@example.com',
+        subject='Success',
+        body='Pipeline completed'
+    ).execute(context)
+
+# On-failure callback
+def on_failure_callback(context):
+    TelegramNotificationOperator(
+        task_id='failure_alert',
+        message='🔴 Pipeline failed!',
+        chat_id='oncall'
+    ).execute(context)
+
+dag = DAG(
+    dag_id='my_pipeline',
+    default_args={
+        'on_success_callback': on_success_callback,
+        'on_failure_callback': on_failure_callback
+    }
+)
+```
+
+---
+
+## Troubleshooting
+
+### Spark Operators
+
+**Issue**: Spark job times out
+
+**Solution**:
+```python
+# Increase timeout and check Spark cluster logs
+spark_task = SparkStandaloneOperator(
+    task_id='job',
+    application_file='job.py',
+    spark_master='spark://master:7077',
+    timeout=10800,  # 3 hours
+    poll_interval=60  # Check status every minute
+)
+```
+
+**Issue**: Out of memory errors
+
+**Solution**:
+```python
+spark_task = SparkYarnOperator(
+    task_id='job',
+    application_file='job.py',
+    spark_master='yarn',
+    executor_memory='8g',  # Increase executor memory
+    driver_memory='4g',    # Increase driver memory
+    conf={
+        'spark.executor.memoryOverhead': '1g',  # Add overhead
+        'spark.sql.shuffle.partitions': '400'   # Increase partitions
+    }
+)
+```
+
+---
+
+### Quality Operators
+
+**Issue**: False positives on schema checks
+
+**Solution**:
+```python
+# Be specific about expected types and allow nullable columns
+expected_schema = {
+    "columns": [
+        {"name": "id", "type": "integer", "nullable": False},
+        {"name": "description", "type": "text", "nullable": True}  # Allow nulls
+    ]
+}
+```
+
+**Issue**: Completeness checks too strict
+
+**Solution**:
+```python
+# Allow small percentage of nulls for optional fields
+check = CompletenessCheckOperator(
+    task_id='check',
+    table_name='table',
+    required_columns=['optional_field'],
+    threshold=0.05,  # Allow 5% nulls
+    severity='WARNING'  # Don't fail pipeline
+)
+```
+
+---
+
+### Notification Operators
+
+**Issue**: Email not sent
+
+**Solution**:
+1. Verify SMTP connection in Airflow UI
+2. Check firewall allows port 587/465
+3. Enable "Allow less secure apps" for Gmail
+4. Check Airflow logs for SMTP errors
+
+**Issue**: Teams webhook returns 400 error
+
+**Solution**:
+```python
+# Ensure message is valid Markdown
+notify = MSTeamsNotificationOperator(
+    task_id='notify',
+    title='Title',
+    message='**Bold** _italic_ `code`',  # Valid Markdown
+    webhook_url='<correct_webhook_url>'
+)
+```
+
+---
+
+## See Also
+
+- [Architecture Documentation](architecture.md) - System design overview
+- [DAG Configuration Guide](dag_configuration.md) - JSON schema for dynamic DAGs
+- [Retry and Failure Handling](retry_and_failure_handling.md) - Comprehensive retry strategies
+- [Development Guide](development.md) - Local setup and testing
+- [Example DAG Catalog](dag_examples_catalog.md) - 14 example DAGs
+
+---
+
+**Last Updated**: 2025-10-21
+**Maintained By**: Platform Team

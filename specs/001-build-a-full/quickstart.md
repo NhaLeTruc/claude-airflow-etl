@@ -1,6 +1,6 @@
 # Quickstart Guide: Apache Airflow ETL Demo Platform
 
-**Last Updated**: 2025-10-15
+**Last Updated**: 2025-10-21
 **Branch**: `001-build-a-full`
 
 ## Overview
@@ -164,7 +164,7 @@ SELECT 'sales', COUNT(*) FROM warehouse.fact_sales;
 
 ### DAG Categories
 
-The platform includes 12+ example DAGs organized by complexity:
+The platform includes 14 example DAGs organized by complexity:
 
 **Beginner** (`dags/examples/beginner/`):
 1. `demo_simple_extract_load_v1` - Basic data extraction and loading
@@ -356,7 +356,7 @@ if dag_bag.import_errors:
 "
 ```
 
-**Expected Output**: 0 import errors, 12+ DAGs loaded.
+**Expected Output**: 0 import errors, 14 DAGs loaded.
 
 ---
 
@@ -480,6 +480,7 @@ sleep 120
 - **Architecture**: Read `docs/architecture.md` for system design details
 - **DAG Configuration**: See `docs/dag_configuration.md` for JSON schema reference
 - **Custom Operators**: Check `docs/operator_guide.md` for operator development
+- **CI/CD Pipeline**: Review `docs/ci_cd_pipeline.md` for deployment automation
 - **Development**: Follow `docs/development.md` for local Python development setup
 
 ### Customize for Your Use Case
