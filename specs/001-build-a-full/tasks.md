@@ -238,7 +238,7 @@
 - [X] T100 [P] [US5] Implement uniqueness check operator in src/operators/quality/uniqueness_checker.py (GROUP BY with COUNT, duplicate row identification, composite key support)
 - [X] T101 [P] [US5] Implement null rate check operator in src/operators/quality/null_rate_checker.py (NULL count per column, percentage calculation, threshold validation)
 - [X] T102 [US5] Register all quality operators in operator registry in dags/factory/operator_registry.py
-- [ ] T103 [P] [US5] Create Great Expectations integration utility in src/utils/great_expectations_helper.py (expectation suite loader, validation result parser)
+- [X] T103 [P] [US5] Create Great Expectations integration utility in src/utils/great_expectations_helper.py (expectation suite loader, validation result parser)
 
 **Checkpoint**: All data quality operators implemented and tested
 
@@ -252,9 +252,9 @@
 
 ### Tests for Example DAGs (TDD: Write tests FIRST) ⚠️
 
-- [ ] T104 [P] [US5] Integration test for all example DAGs in tests/integration/test_example_dags.py (test each DAG executes successfully in under 5 minutes)
-- [ ] T105 [P] [US5] Integration test for idempotency in tests/integration/test_dag_idempotency.py (test incremental DAG runs multiple times without duplicates)
-- [ ] T106 [P] [US5] Integration test for data quality detection in tests/integration/test_quality_detection.py (test quality DAG detects all injected anomalies)
+- [X] T104 [P] [US5] Integration test for all example DAGs in tests/integration/test_example_dags.py (test each DAG executes successfully in under 5 minutes)
+- [X] T105 [P] [US5] Integration test for idempotency in tests/integration/test_dag_idempotency.py (test incremental DAG runs multiple times without duplicates)
+- [X] T106 [P] [US5] Integration test for data quality detection in tests/integration/test_quality_detection.py (test quality DAG detects all injected anomalies)
 
 ### Beginner Example DAGs
 
@@ -267,21 +267,21 @@
 
 - [ ] T111 [P] [US5] Create incremental load DAG in dags/examples/intermediate/demo_incremental_load_v1.py (watermark tracking, process only new records, idempotent)
 - [ ] T112 [P] [US5] Create SCD Type 2 DAG in dags/examples/intermediate/demo_scd_type2_v1.py (dimension history tracking, effective dates, current flag)
-- [ ] T113 [P] [US5] Create parallel processing DAG in dags/examples/intermediate/demo_parallel_processing_v1.py (fan-out pattern, multiple branches, join)
-- [ ] T114 [P] [US5] Create Spark standalone DAG in dags/examples/intermediate/demo_spark_standalone_v1.py (submit word count job, monitor status)
-- [ ] T115 [P] [US5] Create cross-DAG dependency in dags/examples/intermediate/demo_cross_dag_dependency_v1.py (ExternalTaskSensor, TriggerDagRunOperator)
+- [X] T113 [P] [US5] Create parallel processing DAG in dags/examples/intermediate/demo_parallel_processing_v1.py (fan-out pattern, multiple branches, join)
+- [X] T114 [P] [US5] Create Spark standalone DAG in dags/examples/intermediate/demo_spark_standalone_v1.py (submit word count job, monitor status)
+- [X] T115 [P] [US5] Create cross-DAG dependency in dags/examples/intermediate/demo_cross_dag_dependency_v1.py (ExternalTaskSensor, TriggerDagRunOperator)
 
 ### Advanced Example DAGs
 
-- [ ] T116 [P] [US5] Create multi-cluster Spark DAG in dags/examples/advanced/demo_spark_multi_cluster_v1.py (jobs to standalone, YARN, K8s)
-- [ ] T117 [P] [US5] Create comprehensive quality DAG in dags/examples/advanced/demo_comprehensive_quality_v1.py (all 5 quality checks, severity levels, alerting)
-- [ ] T118 [P] [US5] Create event-driven pipeline DAG in dags/examples/advanced/demo_event_driven_pipeline_v1.py (FileSensor, trigger on file arrival)
-- [ ] T119 [P] [US5] Create failure recovery DAG in dags/examples/advanced/demo_failure_recovery_v1.py (compensation tasks, cleanup on failure, state recovery)
+- [X] T116 [P] [US5] Create multi-cluster Spark DAG in dags/examples/advanced/demo_spark_multi_cluster_v1.py (jobs to standalone, YARN, K8s)
+- [X] T117 [P] [US5] Create comprehensive quality DAG in dags/examples/advanced/demo_comprehensive_quality_v1.py (all 5 quality checks, severity levels, alerting)
+- [X] T118 [P] [US5] Create event-driven pipeline DAG in dags/examples/advanced/demo_event_driven_pipeline_v1.py (FileSensor, trigger on file arrival)
+- [X] T119 [P] [US5] Create failure recovery DAG in dags/examples/advanced/demo_failure_recovery_v1.py (compensation tasks, cleanup on failure, state recovery)
 
 ### Documentation for Example DAGs
 
-- [ ] T120 [US5] Add inline documentation to all example DAGs (docstrings explaining pattern, use case, Airflow features)
-- [ ] T121 [P] [US5] Create example DAG catalog in docs/dag_examples_catalog.md (index of all examples with descriptions and learning objectives)
+- [X] T120 [US5] Add inline documentation to all example DAGs (docstrings explaining pattern, use case, Airflow features)
+- [X] T121 [P] [US5] Create example DAG catalog in docs/dag_examples_catalog.md (index of all examples with descriptions and learning objectives)
 
 **Checkpoint**: All 13 example DAGs complete and independently executable
 
