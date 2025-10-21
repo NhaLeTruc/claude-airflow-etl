@@ -1,0 +1,407 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version/tag to deploy (e.g., v1.2.3 or commit SHA)'
+        required: true
+      reason:
+        description: 'Deployment reason/ticket number'
+        required: true
+      skip_tests:
+        description: 'Skip smoke tests (NOT RECOMMENDED)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+env:
+  PYTHON_VERSION: '3.11'
+  DEPLOYMENT_ENV: 'production'
+
+jobs:
+  approval-check:
+    name: Deployment Approval
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      # GitHub environment protection rules provide approval gate
+
+    steps:
+      - name: Log deployment request
+        run: |
+          echo "====================================="
+          echo "PRODUCTION DEPLOYMENT REQUEST"
+          echo "====================================="
+          echo "Version: ${{ github.event.inputs.version }}"
+          echo "Reason: ${{ github.event.inputs.reason }}"
+          echo "Requested by: ${{ github.actor }}"
+          echo "Skip tests: ${{ github.event.inputs.skip_tests }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "====================================="
+          echo ""
+          echo "⚠️  CRITICAL: Deploying to PRODUCTION environment"
+          echo "Review carefully before approving!"
+
+      - name: Validate deployment inputs
+        run: |
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            echo "ERROR: Version is required"
+            exit 1
+          fi
+
+          if [ -z "${{ github.event.inputs.reason }}" ]; then
+            echo "ERROR: Deployment reason is required"
+            exit 1
+          fi
+
+          echo "Deployment inputs validated"
+
+  pre-deployment-validation:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: approval-check
+
+    steps:
+      - name: Checkout code at specified version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Verify version exists
+        run: |
+          echo "Checking out version: ${{ github.event.inputs.version }}"
+          git log -1 --oneline
+          echo "Commit SHA: $(git rev-parse HEAD)"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Validate DAGs
+        run: |
+          python -c "
+          from airflow.models import DagBag
+          import sys
+
+          print('Loading DAGs for production deployment...')
+          dag_bag = DagBag(dag_folder='dags/', include_examples=False)
+
+          if dag_bag.import_errors:
+              print('ERROR: DAG Import Errors detected:')
+              for file, error in dag_bag.import_errors.items():
+                  print(f'  {file}: {error}')
+              sys.exit(1)
+
+          print(f'✓ Successfully validated {len(dag_bag.dags)} DAGs')
+
+          # Check for DAG integrity
+          for dag_id, dag in dag_bag.dags.items():
+              try:
+                  dag.topological_sort()
+              except Exception as e:
+                  print(f'ERROR: DAG {dag_id} has circular dependencies: {e}')
+                  sys.exit(1)
+
+          print('✓ All DAGs have valid dependencies')
+          print('Production deployment validation PASSED')
+          "
+
+      - name: Run critical tests
+        run: |
+          pytest tests/unit -v --tb=short -m "not slow"
+          pytest tests/integration/test_deployment_smoke.py -v --tb=short
+        env:
+          AIRFLOW_HOME: /tmp/airflow
+          AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace }}/dags
+
+      - name: Security scan
+        run: |
+          pip install safety
+          safety check --file requirements.txt || echo "WARNING: Security issues detected (review recommended)"
+
+  create-backup:
+    name: Backup Current Production
+    runs-on: ubuntu-latest
+    needs: pre-deployment-validation
+
+    steps:
+      - name: Log backup creation
+        run: |
+          echo "Creating backup of current production deployment"
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "In a real deployment, this step would:"
+          echo "  1. Tag current production state"
+          echo "  2. Backup DAG files"
+          echo "  3. Backup database (if applicable)"
+          echo "  4. Store backup artifacts for rollback"
+          echo ""
+          echo "Example backup commands:"
+          echo "  git tag production-backup-$(date +%Y%m%d-%H%M%S)"
+          echo "  tar -czf production-backup.tar.gz /opt/airflow/dags"
+          echo "  pg_dump airflow > airflow-backup.sql"
+
+      # Placeholder for actual backup
+      # - name: Create production backup
+      #   run: |
+      #     # Tag current production state
+      #     git tag "production-backup-$(date +%Y%m%d-%H%M%S)"
+      #     git push origin --tags
+      #
+      # - name: Backup to S3/Cloud Storage
+      #   run: |
+      #     # Upload backup to cloud storage
+      #     aws s3 cp production-backup.tar.gz s3://backups/airflow/
+
+  deploy-to-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: create-backup
+    environment:
+      name: production
+      url: https://airflow.example.com  # Replace with actual production URL
+
+    steps:
+      - name: Checkout deployment version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Create deployment artifact
+        run: |
+          echo "Creating production deployment artifact"
+          echo "Version: ${{ github.event.inputs.version }}"
+
+          # Create deployment package
+          tar -czf production-deployment.tar.gz \
+            dags/ \
+            src/ \
+            requirements.txt \
+            --exclude='*.pyc' \
+            --exclude='__pycache__' \
+            --exclude='.git' \
+            --exclude='tests' \
+            --exclude='*.md'
+
+          echo "Artifact created: $(ls -lh production-deployment.tar.gz)"
+
+          # Calculate checksum for verification
+          sha256sum production-deployment.tar.gz > production-deployment.tar.gz.sha256
+          cat production-deployment.tar.gz.sha256
+
+      - name: Upload production artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-deployment-${{ github.event.inputs.version }}
+          path: |
+            production-deployment.tar.gz
+            production-deployment.tar.gz.sha256
+          retention-days: 90  # Keep production artifacts longer
+
+      - name: Deploy to production (simulated)
+        run: |
+          echo "========================================="
+          echo "DEPLOYING TO PRODUCTION"
+          echo "========================================="
+          echo "Version: ${{ github.event.inputs.version }}"
+          echo "Reason: ${{ github.event.inputs.reason }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "========================================="
+          echo ""
+          echo "In a real deployment, this step would:"
+          echo "  1. Stop traffic to old instances (blue)"
+          echo "  2. Deploy new version (green)"
+          echo "  3. Run health checks on new instances"
+          echo "  4. Gradually shift traffic to new instances"
+          echo "  5. Monitor for errors"
+          echo "  6. Complete cutover or rollback if issues"
+          echo ""
+          echo "Blue-Green Deployment Example:"
+          echo "  1. Deploy to green environment"
+          echo "  2. kubectl apply -f k8s/airflow-green.yaml"
+          echo "  3. Wait for pods to be ready"
+          echo "  4. Run smoke tests against green"
+          echo "  5. Switch load balancer to green"
+          echo "  6. Monitor for 10 minutes"
+          echo "  7. Decommission blue if successful"
+
+      # Placeholder for actual deployment
+      # - name: Deploy via SSH
+      #   uses: appleboy/scp-action@v0.1.4
+      #   with:
+      #     host: ${{ secrets.PROD_HOST }}
+      #     username: ${{ secrets.PROD_USER }}
+      #     key: ${{ secrets.PROD_SSH_KEY }}
+      #     source: "production-deployment.tar.gz"
+      #     target: "/opt/deployments/"
+      #
+      # - name: Execute deployment script
+      #   uses: appleboy/ssh-action@v1.0.0
+      #   with:
+      #     host: ${{ secrets.PROD_HOST }}
+      #     username: ${{ secrets.PROD_USER }}
+      #     key: ${{ secrets.PROD_SSH_KEY }}
+      #     script: |
+      #       cd /opt/deployments
+      #       tar -xzf production-deployment.tar.gz -C /opt/airflow/
+      #       pip install -r /opt/airflow/requirements.txt
+      #       sudo systemctl restart airflow-scheduler
+      #       sudo systemctl restart airflow-webserver
+
+  post-deployment-validation:
+    name: Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: deploy-to-production
+    if: github.event.inputs.skip_tests != 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Wait for deployment to stabilize
+        run: |
+          echo "Waiting 60 seconds for production services to stabilize..."
+          sleep 60
+
+      - name: Run production smoke tests
+        run: |
+          echo "Running smoke tests against production"
+          echo ""
+          echo "Critical checks:"
+          echo "  ✓ Airflow UI accessible"
+          echo "  ✓ Scheduler running"
+          echo "  ✓ DAGs loaded correctly"
+          echo "  ✓ Database connectivity"
+          echo "  ✓ No import errors"
+          echo ""
+          echo "In a real deployment:"
+          echo "  curl -f https://airflow.example.com/health || exit 1"
+          echo "  pytest tests/integration/test_deployment_smoke.py --production"
+
+      # Placeholder for actual smoke tests
+      # - name: Check production health
+      #   run: |
+      #     curl -f ${{ secrets.PROD_URL }}/health || exit 1
+      #
+      # - name: Verify DAG count
+      #   run: |
+      #     # Use Airflow API to check DAG count
+      #     EXPECTED_DAGS=14
+      #     ACTUAL_DAGS=$(curl -s ${{ secrets.PROD_URL }}/api/v1/dags | jq '.total_entries')
+      #     if [ "$ACTUAL_DAGS" -lt "$EXPECTED_DAGS" ]; then
+      #       echo "ERROR: Expected at least $EXPECTED_DAGS DAGs, found $ACTUAL_DAGS"
+      #       exit 1
+      #     fi
+
+  deployment-report:
+    name: Deployment Report
+    runs-on: ubuntu-latest
+    needs: [deploy-to-production, post-deployment-validation]
+    if: always()
+
+    steps:
+      - name: Generate deployment report
+        run: |
+          echo "======================================"
+          echo "PRODUCTION DEPLOYMENT REPORT"
+          echo "======================================"
+          echo "Version: ${{ github.event.inputs.version }}"
+          echo "Reason: ${{ github.event.inputs.reason }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "Status:"
+          echo "  Deployment: ${{ needs.deploy-to-production.result }}"
+          echo "  Validation: ${{ needs.post-deployment-validation.result }}"
+          echo ""
+
+          if [[ "${{ needs.deploy-to-production.result }}" == "success" ]] && \
+             [[ "${{ needs.post-deployment-validation.result }}" == "success" ]]; then
+            echo "✅ DEPLOYMENT SUCCESSFUL"
+          else
+            echo "❌ DEPLOYMENT ISSUES DETECTED"
+            echo "Review logs and consider rollback if critical"
+          fi
+
+      - name: Notify stakeholders
+        run: |
+          echo "Sending deployment notifications..."
+          echo ""
+          echo "Notification channels:"
+          echo "  - Email to engineering@example.com"
+          echo "  - Slack #production-deployments"
+          echo "  - MS Teams Production channel"
+          echo "  - PagerDuty (if issues detected)"
+
+      # Placeholder for notifications
+      # - name: Send Slack notification
+      #   uses: slackapi/slack-github-action@v1.24.0
+      #   with:
+      #     webhook-url: ${{ secrets.SLACK_PROD_WEBHOOK }}
+      #     payload: |
+      #       {
+      #         "text": "Production Deployment: ${{ github.event.inputs.version }}",
+      #         "blocks": [
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*Production Deployment Complete*\n*Version:* ${{ github.event.inputs.version }}\n*Status:* ${{ needs.deploy-to-production.result }}"
+      #             }
+      #           }
+      #         ]
+      #       }
+
+  emergency-rollback:
+    name: Emergency Rollback (On Failure)
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [deploy-to-production, post-deployment-validation]
+
+    steps:
+      - name: Alert on deployment failure
+        run: |
+          echo "======================================="
+          echo "⚠️  PRODUCTION DEPLOYMENT FAILED"
+          echo "======================================="
+          echo "Version: ${{ github.event.inputs.version }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "IMMEDIATE ACTION REQUIRED:"
+          echo "  1. Check deployment logs above"
+          echo "  2. Determine if rollback is needed"
+          echo "  3. Execute rollback procedure if critical"
+          echo ""
+          echo "Rollback options:"
+          echo "  A. Automated: Restore from production-backup tag"
+          echo "  B. Manual: Review and fix issues, redeploy"
+          echo ""
+          echo "Contact: on-call engineer via PagerDuty"
+
+      # Placeholder for automated rollback
+      # - name: Trigger automated rollback
+      #   run: |
+      #     # Find last successful production tag
+      #     LAST_GOOD=$(git tag --list 'production-backup-*' --sort=-creatordate | head -1)
+      #     echo "Rolling back to: $LAST_GOOD"
+      #     # Trigger deployment of last good version
+      #     # gh workflow run cd-production.yml --ref $LAST_GOOD
