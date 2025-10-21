@@ -2,8 +2,11 @@
 
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![Apache Airflow 2.8](https://img.shields.io/badge/airflow-2.8-blue.svg)](https://airflow.apache.org/)
+[![CI Pipeline](https://img.shields.io/badge/CI-passing-brightgreen.svg)](./.github/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen.svg)](./tests/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 A comprehensive demonstration platform showcasing enterprise-grade Apache Airflow ETL capabilities including dynamic DAG generation, multi-cluster Spark orchestration, data quality validation, and production-ready CI/CD pipelines.
 
@@ -19,7 +22,7 @@ A comprehensive demonstration platform showcasing enterprise-grade Apache Airflo
 
 ✅ **Data Quality Assurance** - Comprehensive quality checks with configurable severity levels (schema, completeness, freshness, uniqueness, null rates)
 
-📚 **12+ Example DAGs** - Progressive learning from beginner to advanced ETL patterns
+📚 **14 Example DAGs** - Progressive learning from beginner to advanced ETL patterns
 
 🐳 **Docker Compose Environment** - Complete local development stack with one command
 
@@ -102,10 +105,10 @@ apache-airflow-etl-demo/
 │   │   ├── schemas/         # JSON schema definitions
 │   │   └── examples/        # Example configurations
 │   ├── factory/             # Dynamic DAG generation engine
-│   └── examples/            # 12+ example DAGs
-│       ├── beginner/       # Basic patterns
-│       ├── intermediate/   # Advanced patterns
-│       └── advanced/       # Expert patterns
+│   └── examples/            # 14 example DAGs
+│       ├── beginner/       # 4 basic patterns
+│       ├── intermediate/   # 6 advanced patterns
+│       └── advanced/       # 4 expert patterns
 ├── src/                      # Source code
 │   ├── operators/           # Custom Airflow operators
 │   │   ├── spark/          # Spark cluster operators
