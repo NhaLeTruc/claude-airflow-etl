@@ -1,0 +1,260 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  AIRFLOW_HOME: /home/runner/airflow
+  AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace }}/dags
+  AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+
+jobs:
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install linting dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black mypy
+
+      - name: Run ruff
+        run: |
+          ruff check . --output-format=github
+        continue-on-error: false
+
+      - name: Run black
+        run: |
+          black --check --diff .
+        continue-on-error: false
+
+      - name: Run mypy (type checking)
+        run: |
+          # Install minimal dependencies for type checking
+          pip install -r requirements.txt
+          mypy src/ --ignore-missing-imports --no-error-summary
+        continue-on-error: true  # Type checking warnings shouldn't block CI initially
+
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    needs: lint
+
+    strategy:
+      matrix:
+        python-version: ['3.11']
+      fail-fast: false
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: airflow
+          POSTGRES_PASSWORD: airflow
+          POSTGRES_DB: airflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Initialize Airflow database
+        run: |
+          mkdir -p $AIRFLOW_HOME
+          airflow db init
+        env:
+          AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@localhost:5432/airflow
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit -v --tb=short --maxfail=5
+        env:
+          AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@localhost:5432/airflow
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration -v --tb=short --maxfail=3 -m "not slow"
+        env:
+          AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@localhost:5432/airflow
+
+      - name: Generate coverage report
+        run: |
+          pytest tests/ --cov=src --cov=dags --cov-report=xml --cov-report=term-missing
+        continue-on-error: true
+        env:
+          AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@localhost:5432/airflow
+
+      - name: Upload coverage to artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 7
+        if: always()
+
+  dag-validation:
+    name: DAG Validation
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Airflow and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate DAG files (syntax check)
+        run: |
+          python -c "
+          import sys
+          from pathlib import Path
+          from airflow.models import DagBag
+
+          print('Loading DAGs from dags/ directory...')
+          dag_bag = DagBag(dag_folder='dags/', include_examples=False)
+
+          # Check for import errors
+          if dag_bag.import_errors:
+              print('DAG Import Errors:')
+              for file, error in dag_bag.import_errors.items():
+                  print(f'  {file}: {error}')
+              sys.exit(1)
+
+          # Report DAG count
+          print(f'Successfully loaded {len(dag_bag.dags)} DAGs')
+          for dag_id in sorted(dag_bag.dag_ids):
+              dag = dag_bag.get_dag(dag_id)
+              print(f'  - {dag_id} ({len(dag.tasks)} tasks)')
+
+          print('DAG validation passed!')
+          "
+
+      - name: Check DAG integrity
+        run: |
+          python -c "
+          from airflow.models import DagBag
+
+          dag_bag = DagBag(dag_folder='dags/', include_examples=False)
+
+          # Check for cycles
+          for dag_id, dag in dag_bag.dags.items():
+              try:
+                  dag.topological_sort()
+              except Exception as e:
+                  print(f'ERROR: DAG {dag_id} has circular dependencies: {e}')
+                  exit(1)
+
+          print('All DAGs have valid task dependencies (no cycles)')
+          "
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install safety
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety
+
+      - name: Check dependencies for vulnerabilities
+        run: |
+          # Check requirements files for known security vulnerabilities
+          safety check --file requirements.txt --output text
+        continue-on-error: true  # Don't block CI on security warnings initially
+
+      - name: Check for secrets in code
+        run: |
+          # Simple grep-based secret detection
+          echo "Checking for potential secrets in code..."
+
+          # Check for hardcoded passwords, API keys, tokens
+          if grep -r -i -E "(password|api_key|secret|token)\s*=\s*['\"][\w-]{8,}" --include="*.py" --exclude-dir=".git" --exclude-dir="venv" --exclude-dir=".venv" .; then
+            echo "WARNING: Potential hardcoded secrets found (review above)"
+            # Don't fail CI, just warn
+          else
+            echo "No obvious hardcoded secrets detected"
+          fi
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test, dag-validation, security-scan]
+    if: always()
+
+    steps:
+      - name: Check job statuses
+        run: |
+          echo "CI Pipeline Summary"
+          echo "===================="
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Test: ${{ needs.test.result }}"
+          echo "DAG Validation: ${{ needs.dag-validation.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+
+          # Fail if critical jobs failed
+          if [[ "${{ needs.lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.test.result }}" == "failure" ]] || \
+             [[ "${{ needs.dag-validation.result }}" == "failure" ]]; then
+            echo "Critical CI checks failed"
+            exit 1
+          fi
+
+          echo "All critical checks passed!"
+
+      - name: Post summary to PR (if applicable)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "CI pipeline completed for PR #${{ github.event.pull_request.number }}"
+          # In real implementation, post summary comment to PR using GitHub API
