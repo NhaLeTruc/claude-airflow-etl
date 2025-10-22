@@ -129,7 +129,6 @@ All tasks completed successfully!
     process_data_task = PythonOperator(
         task_id="process_data_task",
         python_callable=process_data,
-        provide_context=True,
     )
 
     # Task 6: Detailed success notification with processing stats

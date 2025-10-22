@@ -88,25 +88,27 @@ validate_schema = SchemaValidator(
     task_id="validate_customer_schema",
     warehouse_conn_id="warehouse",
     table_name="warehouse.dim_customer",
-    expected_schema=[
-        {"column_name": "customer_id", "data_type": "integer", "nullable": False},
-        {"column_name": "customer_name", "data_type": "character varying", "nullable": True},
-        {"column_name": "email", "data_type": "character varying", "nullable": True},
-        {"column_name": "phone", "data_type": "character varying", "nullable": True},
-        {"column_name": "address", "data_type": "character varying", "nullable": True},
-        {"column_name": "city", "data_type": "character varying", "nullable": True},
-        {"column_name": "state", "data_type": "character varying", "nullable": True},
-        {"column_name": "zip_code", "data_type": "character varying", "nullable": True},
-        {"column_name": "country", "data_type": "character varying", "nullable": True},
-        {"column_name": "created_date", "data_type": "date", "nullable": True},
-        {
-            "column_name": "last_modified_date",
-            "data_type": "timestamp without time zone",
-            "nullable": True,
-        },
-    ],
+    expected_schema={
+        "columns": [
+            {"column_name": "customer_id", "data_type": "integer", "nullable": False},
+            {"column_name": "customer_name", "data_type": "character varying", "nullable": True},
+            {"column_name": "email", "data_type": "character varying", "nullable": True},
+            {"column_name": "phone", "data_type": "character varying", "nullable": True},
+            {"column_name": "address", "data_type": "character varying", "nullable": True},
+            {"column_name": "city", "data_type": "character varying", "nullable": True},
+            {"column_name": "state", "data_type": "character varying", "nullable": True},
+            {"column_name": "zip_code", "data_type": "character varying", "nullable": True},
+            {"column_name": "country", "data_type": "character varying", "nullable": True},
+            {"column_name": "created_date", "data_type": "date", "nullable": True},
+            {
+                "column_name": "last_modified_date",
+                "data_type": "timestamp without time zone",
+                "nullable": True,
+            },
+        ]
+    },
     severity=QualitySeverity.CRITICAL,  # Fail pipeline on schema mismatch
-    check_extra_columns=False,  # Allow extra columns (flexible)
+    allow_extra_columns=True,  # Changed from check_extra_columns to allow_extra_columns (correct parameter name)
     dag=dag,
 )
 
@@ -117,7 +119,7 @@ check_row_count = CompletenessChecker(
     table_name="warehouse.dim_customer",
     min_count=10,  # Expect at least 10 customers
     expected_count=1000,  # Expect around 1000 customers
-    tolerance_percentage=20.0,  # Allow 20% deviation from expected
+    tolerance_percent=20.0,  # Changed from tolerance_percentage to tolerance_percent (correct parameter name)
     severity=QualitySeverity.WARNING,  # Warn but don't fail
     dag=dag,
 )
@@ -150,7 +152,6 @@ def log_quality_results(**context):
 log_results = PythonOperator(
     task_id="log_quality_results",
     python_callable=log_quality_results,
-    provide_context=True,
     dag=dag,
 )
 

@@ -343,7 +343,6 @@ def log_scd_stats(**context):
 log_stats = PythonOperator(
     task_id="log_scd_statistics",
     python_callable=log_scd_stats,
-    provide_context=True,
     dag=dag,
 )
 

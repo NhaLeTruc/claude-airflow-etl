@@ -13,8 +13,8 @@ from typing import Any
 from airflow import DAG
 from airflow.models import BaseOperator
 
-from dags.factory.config_validator import ValidationResult, get_default_validator
-from dags.factory.operator_registry import get_default_registry
+from factory.config_validator import ValidationResult, get_default_validator
+from factory.operator_registry import get_default_registry
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -141,7 +141,7 @@ class DAGBuilder:
         dag_kwargs = {
             "dag_id": dag_id,
             "description": description,
-            "schedule_interval": schedule_interval,
+            "schedule": schedule_interval,  # Changed from schedule_interval to schedule (Airflow 3.x)
             "start_date": start_date,
             "default_args": processed_default_args,
             "catchup": config.get("catchup", False),

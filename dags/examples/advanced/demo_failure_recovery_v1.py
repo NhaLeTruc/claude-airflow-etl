@@ -105,7 +105,6 @@ extract_source_a = BashOperator(
 failing_task = PythonOperator(
     task_id="failing_transform_a",
     python_callable=simulate_failure,
-    provide_context=True,
     dag=dag,
 )
 
@@ -190,7 +189,6 @@ merge_results = BashOperator(
 cleanup = PythonOperator(
     task_id="cleanup_and_compensation",
     python_callable=compensation_logic,
-    provide_context=True,
     trigger_rule=TriggerRule.ALL_DONE,  # Run after all upstream tasks complete (success or fail)
     dag=dag,
 )
