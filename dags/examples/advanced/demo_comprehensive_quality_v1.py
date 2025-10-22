@@ -541,7 +541,7 @@ with DAG(
     dag_id="demo_comprehensive_quality_v1",
     default_args=default_args,
     description="Demonstrates all 5 data quality check types with severity levels and alerting",
-    schedule_interval=None,  # Manual trigger for demo
+    schedule=None,  # Manual trigger for demo
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["advanced", "quality", "validation", "comprehensive", "demo"],

@@ -36,7 +36,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.sensors.filesystem import FileSensor
 from airflow.utils.trigger_rule import TriggerRule
@@ -395,7 +395,7 @@ with DAG(
     dag_id="demo_event_driven_pipeline_v1",
     default_args=default_args,
     description="Demonstrates event-driven pipeline with file sensors and dynamic branching",
-    schedule_interval=None,  # Event-driven, not scheduled
+    schedule=None,  # Event-driven, not scheduled
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["advanced", "event-driven", "sensor", "dynamic", "demo"],
@@ -466,7 +466,7 @@ with DAG(
     )
 
     # Join point after branch
-    join = DummyOperator(
+    join = EmptyOperator(
         task_id="join",
         trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,
         doc_md="Join point after processing branches",

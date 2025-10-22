@@ -47,7 +47,7 @@ with DAG(
     dag_id="demo_notification_basics_v1",
     default_args=default_args,
     description="Demonstrate multi-channel notification operators",
-    schedule_interval=None,  # Manual trigger only
+    schedule=None,  # Manual trigger only
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["demo", "beginner", "notifications"],

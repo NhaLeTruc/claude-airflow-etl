@@ -11,7 +11,7 @@ from pathlib import Path
 
 from airflow import DAG
 
-from dags.factory.dag_builder import DAGBuilder, DAGBuildError
+from factory.dag_builder import DAGBuilder, DAGBuildError
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -34,10 +34,11 @@ import logging
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.utils.state import DagRunState
 from airflow.utils.trigger_rule import TriggerRule
 
 logger = logging.getLogger(__name__)
@@ -202,14 +203,14 @@ with DAG(
     dag_id="demo_cross_dag_dependency_v1",
     default_args=default_args,
     description="Demonstrates cross-DAG dependencies using sensors and triggers",
-    schedule_interval=None,  # Manual trigger for demo
+    schedule=None,  # Manual trigger for demo
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["intermediate", "cross-dag", "sensor", "trigger", "demo"],
     doc_md=__doc__,
 ) as dag:
     # Start task
-    start = DummyOperator(
+    start = EmptyOperator(
         task_id="start",
         doc_md="Start of cross-DAG coordination workflow",
     )
@@ -220,8 +221,8 @@ with DAG(
         task_id="wait_for_upstream_dag",
         external_dag_id="demo_simple_extract_load_v1",
         external_task_id=None,  # Wait for entire DAG to complete
-        allowed_states=["success"],
-        failed_states=["failed", "skipped"],
+        allowed_states=[DagRunState.SUCCESS],
+        failed_states=[DagRunState.FAILED, DagRunState.SKIPPED],
         mode="poke",
         timeout=600,  # 10 minutes timeout
         poke_interval=30,  # Check every 30 seconds
@@ -268,7 +269,7 @@ with DAG(
     )
 
     # Skip branch when quality doesn't meet threshold
-    skip_processing = DummyOperator(
+    skip_processing = EmptyOperator(
         task_id="skip_processing",
         doc_md="Placeholder task when quality checks fail and processing is skipped",
     )
@@ -282,7 +283,7 @@ with DAG(
     )
 
     # Join point after branch
-    join = DummyOperator(
+    join = EmptyOperator(
         task_id="join",
         trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,
         doc_md="Join point after conditional branching",
@@ -320,7 +321,7 @@ with DAG(
     dag_id="demo_cross_dag_dependency_helper_v1",
     default_args=default_args,
     description="Helper DAG to demonstrate being triggered by another DAG",
-    schedule_interval=None,
+    schedule=None,
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["intermediate", "cross-dag", "helper", "demo"],
@@ -351,7 +352,7 @@ with DAG(
         doc_md="Log information about being triggered by another DAG",
     )
 
-    simulate_work = DummyOperator(
+    simulate_work = EmptyOperator(
         task_id="simulate_work",
         doc_md="Simulate processing work in triggered DAG",
     )

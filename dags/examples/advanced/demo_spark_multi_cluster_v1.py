@@ -24,7 +24,7 @@ typically use one cluster type based on your infrastructure.
 from datetime import datetime
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
 from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
@@ -47,14 +47,14 @@ dag = DAG(
     dag_id="demo_spark_multi_cluster_v1",
     default_args=default_args,
     description="Advanced multi-cluster Spark orchestration across Standalone, YARN, and Kubernetes",
-    schedule_interval=None,  # Manual trigger only
+    schedule=None,  # Manual trigger only
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=["demo", "advanced", "spark", "multi-cluster", "parallel"],
 )
 
 # Start
-start = DummyOperator(task_id="start", dag=dag)
+start = EmptyOperator(task_id="start", dag=dag)
 
 
 # Cluster availability check (mock - in production, use sensors)
@@ -240,7 +240,7 @@ aggregate = PythonOperator(
     dag=dag,
 )
 
-complete = DummyOperator(task_id="complete", dag=dag)
+complete = EmptyOperator(task_id="complete", dag=dag)
 
 # ==============================================================================
 # Task Dependencies

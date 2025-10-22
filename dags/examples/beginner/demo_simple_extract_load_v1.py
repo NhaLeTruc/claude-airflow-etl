@@ -25,8 +25,11 @@ KEY AIRFLOW FEATURES:
 from datetime import timedelta
 
 from airflow import DAG
-from airflow.operators.postgres_operator import PostgresOperator
-from airflow.utils.dates import days_ago
+from airflow.providers.postgres.operators.postgres import PostgresOperator
+from datetime import datetime, timedelta
+
+def days_ago(n):
+    return datetime.now() - timedelta(days=n)
 
 # Default arguments applied to all tasks
 default_args = {
@@ -43,7 +46,7 @@ dag = DAG(
     dag_id="demo_simple_extract_load_v1",
     default_args=default_args,
     description="Simple extract-load pattern with truncate-and-load for idempotency",
-    schedule_interval="@daily",
+    schedule="@daily",
     start_date=days_ago(1),
     catchup=False,
     tags=["beginner", "extract-load", "postgres", "idempotent"],

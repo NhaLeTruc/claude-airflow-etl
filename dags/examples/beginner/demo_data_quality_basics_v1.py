@@ -25,10 +25,13 @@ KEY AIRFLOW FEATURES:
 from datetime import timedelta
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
-from airflow.operators.postgres_operator import PostgresOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.operators.python import PythonOperator
-from airflow.utils.dates import days_ago
+from datetime import datetime, timedelta
+
+def days_ago(n):
+    return datetime.now() - timedelta(days=n)
 
 from src.operators.quality.base_quality_operator import QualitySeverity
 from src.operators.quality.completeness_checker import CompletenessChecker
@@ -52,7 +55,7 @@ dag = DAG(
     dag_id="demo_data_quality_basics_v1",
     default_args=default_args,
     description="Basic data quality validation with schema and completeness checks",
-    schedule_interval="@daily",
+    schedule="@daily",
     start_date=days_ago(1),
     catchup=False,
     tags=["beginner", "data-quality", "validation", "fail-fast"],
@@ -152,7 +155,7 @@ log_results = PythonOperator(
 )
 
 # Task 5: Quality checks passed - proceed with downstream processing
-quality_passed = DummyOperator(
+quality_passed = EmptyOperator(
     task_id="quality_checks_passed",
     dag=dag,
 )

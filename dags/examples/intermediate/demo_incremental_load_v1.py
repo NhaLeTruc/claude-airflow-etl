@@ -32,10 +32,13 @@ EFFICIENCY:
 from datetime import timedelta
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
-from airflow.operators.postgres_operator import PostgresOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.operators.python import PythonOperator
-from airflow.utils.dates import days_ago
+from datetime import datetime, timedelta
+
+def days_ago(n):
+    return datetime.now() - timedelta(days=n)
 
 from src.hooks.warehouse_hook import WarehouseHook
 from src.utils.logger import get_logger
@@ -58,7 +61,7 @@ dag = DAG(
     dag_id="demo_incremental_load_v1",
     default_args=default_args,
     description="Incremental load pattern with watermark tracking",
-    schedule_interval="@hourly",  # Run every hour for near-real-time
+    schedule="@hourly",  # Run every hour for near-real-time
     start_date=days_ago(7),
     catchup=True,  # Backfill from start_date
     max_active_runs=1,  # Prevent overlapping runs
@@ -297,7 +300,7 @@ verify_no_duplicates = PostgresOperator(
 
 
 # Task 7: Pipeline completion marker
-pipeline_complete = DummyOperator(
+pipeline_complete = EmptyOperator(
     task_id="incremental_load_complete",
     dag=dag,
 )

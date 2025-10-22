@@ -16,7 +16,7 @@ Prerequisites:
 from datetime import datetime
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
+from airflow.operators.empty import EmptyOperator
 
 from src.operators.spark.standalone_operator import SparkStandaloneOperator
 from src.utils.retry_policies import create_retry_config
@@ -40,14 +40,14 @@ dag = DAG(
     dag_id="demo_spark_standalone_v1",
     default_args=default_args,
     description="Demonstrates Spark Standalone job submission and monitoring",
-    schedule_interval=None,  # Manual trigger only
+    schedule=None,  # Manual trigger only
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=["demo", "intermediate", "spark", "standalone"],
 )
 
 # Start placeholder
-start = DummyOperator(task_id="start", dag=dag)
+start = EmptyOperator(task_id="start", dag=dag)
 
 # Spark job 1: Word Count (simple example)
 word_count_job = SparkStandaloneOperator(
@@ -97,7 +97,7 @@ sales_aggregation_job = SparkStandaloneOperator(
 )
 
 # Completion placeholder
-complete = DummyOperator(task_id="complete", dag=dag)
+complete = EmptyOperator(task_id="complete", dag=dag)
 
 # Define task dependencies
 # Run word count first (simpler), then sales aggregation
