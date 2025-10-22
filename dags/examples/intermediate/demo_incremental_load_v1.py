@@ -108,7 +108,6 @@ def get_last_watermark(**context):
 get_watermark = PythonOperator(
     task_id="get_last_watermark",
     python_callable=get_last_watermark,
-    provide_context=True,
     dag=dag,
 )
 
@@ -195,7 +194,6 @@ def calculate_new_watermark(**context):
 calculate_watermark = PythonOperator(
     task_id="calculate_new_watermark",
     python_callable=calculate_new_watermark,
-    provide_context=True,
     dag=dag,
 )
 
@@ -265,7 +263,6 @@ def log_load_stats(**context):
 log_stats = PythonOperator(
     task_id="log_load_statistics",
     python_callable=log_load_stats,
-    provide_context=True,
     dag=dag,
 )
 

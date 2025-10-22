@@ -74,7 +74,8 @@ class OperatorRegistry:
         builtin_operators = {
             "BashOperator": BashOperator,
             "PythonOperator": PythonOperator,
-            "DummyOperator": DummyOperator,
+            "EmptyOperator": EmptyOperator,
+            "DummyOperator": EmptyOperator,  # Backwards compatibility
         }
 
         for name, operator_class in builtin_operators.items():

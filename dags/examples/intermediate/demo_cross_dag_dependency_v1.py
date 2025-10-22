@@ -222,7 +222,7 @@ with DAG(
         external_dag_id="demo_simple_extract_load_v1",
         external_task_id=None,  # Wait for entire DAG to complete
         allowed_states=[DagRunState.SUCCESS],
-        failed_states=[DagRunState.FAILED, DagRunState.SKIPPED],
+        failed_states=[DagRunState.FAILED],  # Removed SKIPPED as it doesn't exist in DagRunState
         mode="poke",
         timeout=600,  # 10 minutes timeout
         poke_interval=30,  # Check every 30 seconds
