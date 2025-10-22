@@ -8,7 +8,6 @@ to Airflow via the module's globals().
 
 import glob
 from pathlib import Path
-from typing import Dict
 
 from airflow import DAG
 
