@@ -5,14 +5,15 @@ Tests parameter validation, job submission, and error handling.
 Following TDD approach - these tests should FAIL until implementation is complete.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
 
 # These imports will fail until implementation exists
 try:
-    from src.operators.spark.standalone_operator import SparkStandaloneOperator
     from src.hooks.spark_hook import SparkJobStatus
+    from src.operators.spark.standalone_operator import SparkStandaloneOperator
 except ImportError:
     SparkStandaloneOperator = None
     SparkJobStatus = None

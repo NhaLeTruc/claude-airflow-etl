@@ -4,7 +4,7 @@ Warehouse database hook for Apache Airflow ETL Demo Platform.
 Provides connection management and query execution for the mock data warehouse.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import psycopg2
 from airflow.hooks.base import BaseHook
@@ -38,7 +38,7 @@ class WarehouseHook(BaseHook):
         """
         super().__init__()
         self.warehouse_conn_id = warehouse_conn_id
-        self._connection: Optional[psycopg2.extensions.connection] = None
+        self._connection: psycopg2.extensions.connection | None = None
         logger.debug("WarehouseHook initialized", conn_id=warehouse_conn_id)
 
     def get_conn(self) -> psycopg2.extensions.connection:
@@ -88,8 +88,8 @@ class WarehouseHook(BaseHook):
         return self._connection
 
     def execute_query(
-        self, query: str, params: Optional[Dict[str, Any]] = None, fetch: bool = False
-    ) -> Optional[List[Dict[str, Any]]]:
+        self, query: str, params: dict[str, Any] | None = None, fetch: bool = False
+    ) -> list[dict[str, Any]] | None:
         """
         Execute SQL query with optional parameter binding.
 
@@ -130,9 +130,7 @@ class WarehouseHook(BaseHook):
             if cursor:
                 cursor.close()
 
-    def bulk_insert(
-        self, table: str, records: List[Dict[str, Any]], page_size: int = 1000
-    ) -> int:
+    def bulk_insert(self, table: str, records: list[dict[str, Any]], page_size: int = 1000) -> int:
         """
         Bulk insert records into table using execute_values.
 
@@ -185,7 +183,7 @@ class WarehouseHook(BaseHook):
             if cursor:
                 cursor.close()
 
-    def get_pandas_df(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def get_pandas_df(self, query: str, params: dict[str, Any] | None = None) -> Any:
         """
         Execute query and return results as pandas DataFrame.
 

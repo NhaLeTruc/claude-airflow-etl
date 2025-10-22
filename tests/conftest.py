@@ -4,15 +4,13 @@ Pytest configuration and shared fixtures for Apache Airflow ETL Demo Platform.
 Provides fixtures for database connections, mock data, and testing utilities.
 """
 
-import json
-import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from airflow.models import DagBag, TaskInstance
+from airflow.models import DagBag
 from airflow.utils.state import State
 
 from src.utils.data_generator import MockDataGenerator
@@ -63,7 +61,7 @@ def mock_data_generator() -> MockDataGenerator:
 
 
 @pytest.fixture
-def sample_customers(mock_data_generator: MockDataGenerator) -> List[Dict[str, Any]]:
+def sample_customers(mock_data_generator: MockDataGenerator) -> list[dict[str, Any]]:
     """
     Fixture providing sample customer data.
 
@@ -74,7 +72,7 @@ def sample_customers(mock_data_generator: MockDataGenerator) -> List[Dict[str, A
 
 
 @pytest.fixture
-def sample_products(mock_data_generator: MockDataGenerator) -> List[Dict[str, Any]]:
+def sample_products(mock_data_generator: MockDataGenerator) -> list[dict[str, Any]]:
     """
     Fixture providing sample product data.
 
@@ -87,9 +85,9 @@ def sample_products(mock_data_generator: MockDataGenerator) -> List[Dict[str, An
 @pytest.fixture
 def sample_sales(
     mock_data_generator: MockDataGenerator,
-    sample_customers: List[Dict[str, Any]],
-    sample_products: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    sample_customers: list[dict[str, Any]],
+    sample_products: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """
     Fixture providing sample sales data with quality issues.
 
@@ -110,7 +108,7 @@ def sample_sales(
 
 
 @pytest.fixture
-def sample_dag_config() -> Dict[str, Any]:
+def sample_dag_config() -> dict[str, Any]:
     """
     Fixture providing sample DAG configuration.
 
@@ -152,7 +150,7 @@ def sample_dag_config() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_warehouse_connection() -> Dict[str, Any]:
+def mock_warehouse_connection() -> dict[str, Any]:
     """
     Fixture providing mock warehouse connection details.
 
@@ -169,7 +167,7 @@ def mock_warehouse_connection() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_airflow_context() -> Dict[str, Any]:
+def mock_airflow_context() -> dict[str, Any]:
     """
     Fixture providing mock Airflow task context.
 
@@ -202,7 +200,7 @@ def mock_airflow_context() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_smtp_config() -> Dict[str, Any]:
+def mock_smtp_config() -> dict[str, Any]:
     """
     Fixture providing mock SMTP configuration.
 
@@ -231,7 +229,7 @@ def mock_teams_webhook_url() -> str:
 
 
 @pytest.fixture
-def mock_telegram_config() -> Dict[str, str]:
+def mock_telegram_config() -> dict[str, str]:
     """
     Fixture providing mock Telegram configuration.
 
@@ -245,7 +243,7 @@ def mock_telegram_config() -> Dict[str, str]:
 
 
 @pytest.fixture
-def mock_quality_check_result() -> Dict[str, Any]:
+def mock_quality_check_result() -> dict[str, Any]:
     """
     Fixture providing mock quality check result.
 
@@ -268,7 +266,7 @@ def mock_quality_check_result() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_spark_config() -> Dict[str, Any]:
+def mock_spark_config() -> dict[str, Any]:
     """
     Fixture providing mock Spark configuration.
 

@@ -5,12 +5,13 @@ Validates row count against expected, minimum, and maximum thresholds
 with tolerance percentage support.
 """
 
-from typing import Any, Dict, Optional
-from airflow.utils.decorators import apply_defaults
-from airflow.exceptions import AirflowException
+from typing import Any
 
-from src.operators.quality.base_quality_operator import BaseQualityOperator
+from airflow.exceptions import AirflowException
+from airflow.utils.decorators import apply_defaults
+
 from src.hooks.warehouse_hook import WarehouseHook
+from src.operators.quality.base_quality_operator import BaseQualityOperator
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -39,15 +40,15 @@ class CompletenessChecker(BaseQualityOperator):
     def __init__(
         self,
         *,
-        expected_count: Optional[int] = None,
-        min_count: Optional[int] = None,
-        max_count: Optional[int] = None,
-        tolerance_percent: Optional[float] = None,
-        where_clause: Optional[str] = None,
-        partition_column: Optional[str] = None,
-        partition_value: Optional[str] = None,
+        expected_count: int | None = None,
+        min_count: int | None = None,
+        max_count: int | None = None,
+        tolerance_percent: float | None = None,
+        where_clause: str | None = None,
+        partition_column: str | None = None,
+        partition_value: str | None = None,
         compare_with_previous: bool = False,
-        comparison_tolerance_percent: Optional[float] = None,
+        comparison_tolerance_percent: float | None = None,
         **kwargs,
     ):
         """Initialize CompletenessChecker."""
@@ -94,7 +95,7 @@ class CompletenessChecker(BaseQualityOperator):
         result = hook.get_first(query)
         return result[0] if result else 0
 
-    def get_previous_count(self, context: Dict[str, Any]) -> Optional[int]:
+    def get_previous_count(self, context: dict[str, Any]) -> int | None:
         """
         Get row count from previous execution.
 
@@ -105,7 +106,7 @@ class CompletenessChecker(BaseQualityOperator):
         # For now, return None
         return None
 
-    def perform_check(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def perform_check(self, context: dict[str, Any]) -> dict[str, Any]:
         """
         Perform completeness check.
 
@@ -140,7 +141,9 @@ class CompletenessChecker(BaseQualityOperator):
                 if self.tolerance_percent:
                     tolerance_value = int(self.expected_count * (self.tolerance_percent / 100.0))
                     expected_check_passed = (
-                        self.expected_count - tolerance_value <= actual_count <= self.expected_count + tolerance_value
+                        self.expected_count - tolerance_value
+                        <= actual_count
+                        <= self.expected_count + tolerance_value
                     )
                 else:
                     expected_check_passed = actual_count == self.expected_count
@@ -153,7 +156,11 @@ class CompletenessChecker(BaseQualityOperator):
                 previous_count = self.get_previous_count(context)
                 if previous_count is not None:
                     result["previous_count"] = previous_count
-                    percent_change = ((actual_count - previous_count) / previous_count * 100.0) if previous_count > 0 else 0.0
+                    percent_change = (
+                        ((actual_count - previous_count) / previous_count * 100.0)
+                        if previous_count > 0
+                        else 0.0
+                    )
                     result["percent_change"] = round(percent_change, 2)
 
                     if self.comparison_tolerance_percent:
@@ -166,11 +173,13 @@ class CompletenessChecker(BaseQualityOperator):
             else:
                 value = 1.0 if passed else 0.0
 
-            result.update({
-                "passed": passed,
-                "value": value,
-                "expected": 1.0,
-            })
+            result.update(
+                {
+                    "passed": passed,
+                    "value": value,
+                    "expected": 1.0,
+                }
+            )
 
             # Add message if failed
             if not passed:
@@ -180,7 +189,9 @@ class CompletenessChecker(BaseQualityOperator):
                 if not max_check_passed:
                     messages.append(f"Row count {actual_count} above maximum {self.max_count}")
                 if not expected_check_passed:
-                    messages.append(f"Row count {actual_count} differs from expected {self.expected_count}")
+                    messages.append(
+                        f"Row count {actual_count} differs from expected {self.expected_count}"
+                    )
 
                 result["message"] = "; ".join(messages)
                 result["details"] = f"Completeness check failed for {self.table_name}"

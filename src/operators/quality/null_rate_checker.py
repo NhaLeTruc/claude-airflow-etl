@@ -4,12 +4,13 @@ Null Rate Checker Operator for Apache Airflow.
 Validates NULL percentage in columns against acceptable thresholds.
 """
 
-from typing import Any, Dict, List, Optional
-from airflow.utils.decorators import apply_defaults
-from airflow.exceptions import AirflowException
+from typing import Any
 
-from src.operators.quality.base_quality_operator import BaseQualityOperator
+from airflow.exceptions import AirflowException
+from airflow.utils.decorators import apply_defaults
+
 from src.hooks.warehouse_hook import WarehouseHook
+from src.operators.quality.base_quality_operator import BaseQualityOperator
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -36,10 +37,10 @@ class NullRateChecker(BaseQualityOperator):
     def __init__(
         self,
         *,
-        column_name: Optional[str] = None,
-        columns: Optional[List[str]] = None,
+        column_name: str | None = None,
+        columns: list[str] | None = None,
         max_null_percentage: float = 100.0,
-        where_clause: Optional[str] = None,
+        where_clause: str | None = None,
         expect_not_null: bool = False,
         **kwargs,
     ):
@@ -88,7 +89,7 @@ class NullRateChecker(BaseQualityOperator):
         result = hook.get_first(query)
         return result[0] if result and result[0] else 0
 
-    def get_null_rates(self) -> Dict[str, float]:
+    def get_null_rates(self) -> dict[str, float]:
         """
         Get NULL rates for all columns.
 
@@ -108,7 +109,7 @@ class NullRateChecker(BaseQualityOperator):
 
         return rates
 
-    def perform_check(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def perform_check(self, context: dict[str, Any]) -> dict[str, Any]:
         """
         Perform NULL rate check.
 
@@ -178,7 +179,9 @@ class NullRateChecker(BaseQualityOperator):
                 passed = len(failed_columns) == 0
 
                 # Calculate average value score
-                avg_value = sum(1.0 - (rate / 100.0) for rate in null_rates.values()) / len(null_rates)
+                avg_value = sum(1.0 - (rate / 100.0) for rate in null_rates.values()) / len(
+                    null_rates
+                )
 
                 result = {
                     "passed": passed,

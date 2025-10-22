@@ -5,8 +5,6 @@ Tests that all services start successfully and reach healthy state within timeou
 """
 
 import subprocess
-import time
-from typing import Dict, List
 
 import pytest
 
@@ -82,7 +80,9 @@ class TestDockerEnvironment:
             # Check for critical mounts
             volume_str = str(volumes)
             assert "dags" in volume_str, f"Service '{service_name}' missing dags volume"
-            assert "src" in volume_str or "logs" in volume_str, f"Service '{service_name}' missing src/logs volume"
+            assert (
+                "src" in volume_str or "logs" in volume_str
+            ), f"Service '{service_name}' missing src/logs volume"
 
     def test_environment_variables_configured(self):
         """Test that essential environment variables are configured."""
@@ -99,10 +99,7 @@ class TestDockerEnvironment:
 
         # Should have executor configuration
         # Environment can be dict or list
-        if isinstance(env, dict):
-            env_str = str(env)
-        else:
-            env_str = str(env)
+        str(env) if isinstance(env, dict) else str(env)
 
         # Check for critical env vars (flexible check)
         # These might be in x-airflow-common or inline
@@ -114,7 +111,10 @@ class TestDockerEnvironment:
 
         try:
             result = subprocess.run(
-                ["docker", "compose", "ps", "--format", "json"], capture_output=True, text=True, timeout=10
+                ["docker", "compose", "ps", "--format", "json"],
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
 
             if result.returncode == 0:

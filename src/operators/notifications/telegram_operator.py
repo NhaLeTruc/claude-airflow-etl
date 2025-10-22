@@ -5,11 +5,10 @@ Custom operator for sending notifications via Telegram Bot API.
 Supports Markdown/HTML formatting, silent notifications, and message length handling.
 """
 
-import requests
 import json
-from typing import Any, Dict, Optional
-from datetime import timedelta
+from typing import Any
 
+import requests
 from airflow.exceptions import AirflowException
 from airflow.utils.decorators import apply_defaults
 
@@ -48,7 +47,7 @@ class TelegramNotificationOperator(BaseNotificationOperator):
         bot_token: str,
         chat_id: str,
         message_template: str,
-        parse_mode: Optional[str] = None,
+        parse_mode: str | None = None,
         disable_notification: bool = False,
         disable_web_page_preview: bool = False,
         timeout: int = 30,
@@ -86,8 +85,7 @@ class TelegramNotificationOperator(BaseNotificationOperator):
         self.api_url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
 
         logger.info(
-            f"Telegram operator initialized for chat_id: {chat_id}, "
-            f"parse_mode: {parse_mode}"
+            f"Telegram operator initialized for chat_id: {chat_id}, " f"parse_mode: {parse_mode}"
         )
 
     def _truncate_message(self, message: str) -> str:
@@ -109,7 +107,7 @@ class TelegramNotificationOperator(BaseNotificationOperator):
         truncated = message[: self.MAX_MESSAGE_LENGTH - 20] + "\n\n[...truncated]"
         return truncated
 
-    def _build_payload(self, message: str) -> Dict[str, Any]:
+    def _build_payload(self, message: str) -> dict[str, Any]:
         """
         Build Telegram sendMessage API payload.
 
@@ -133,7 +131,7 @@ class TelegramNotificationOperator(BaseNotificationOperator):
 
         return payload
 
-    def send_notification(self, message: str, context: Dict[str, Any]) -> bool:
+    def send_notification(self, message: str, context: dict[str, Any]) -> bool:
         """
         Send notification via Telegram Bot API.
 
@@ -147,12 +145,12 @@ class TelegramNotificationOperator(BaseNotificationOperator):
             payload = self._build_payload(message)
 
             logger.info(
-                f"Sending Telegram notification",
+                "Sending Telegram notification",
                 extra={
                     "chat_id": self.chat_id,
                     "message_length": len(message),
                     "parse_mode": self.parse_mode,
-                }
+                },
             )
 
             # Send POST request to Telegram API
@@ -170,8 +168,7 @@ class TelegramNotificationOperator(BaseNotificationOperator):
             if response.ok and response_data.get("ok"):
                 message_id = response_data.get("result", {}).get("message_id")
                 logger.info(
-                    f"Telegram notification sent successfully",
-                    extra={"message_id": message_id}
+                    "Telegram notification sent successfully", extra={"message_id": message_id}
                 )
                 return True
             else:
@@ -188,9 +185,7 @@ class TelegramNotificationOperator(BaseNotificationOperator):
                     logger.warning(error_msg)
                     raise AirflowException(error_msg)
 
-                error_msg = (
-                    f"Telegram API returned error: {error_code} - {error_description}"
-                )
+                error_msg = f"Telegram API returned error: {error_code} - {error_description}"
                 logger.error(error_msg)
                 raise AirflowException(error_msg)
 
@@ -211,8 +206,5 @@ class TelegramNotificationOperator(BaseNotificationOperator):
             raise AirflowException(f"Telegram API response parsing failed: {str(e)}") from e
 
         except Exception as e:
-            logger.error(
-                f"Unexpected error sending Telegram notification: {str(e)}",
-                exc_info=True
-            )
+            logger.error(f"Unexpected error sending Telegram notification: {str(e)}", exc_info=True)
             raise AirflowException(f"Telegram notification failed: {str(e)}") from e

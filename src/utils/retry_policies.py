@@ -6,7 +6,6 @@ exponential, linear, and fixed.
 """
 
 from datetime import timedelta
-from typing import Dict, List, Optional, Union
 
 from src.utils.logger import get_logger
 
@@ -16,9 +15,9 @@ logger = get_logger(__name__)
 def calculate_exponential_backoff(
     retry_number: int,
     base_delay: int,
-    max_delay: Optional[int] = None,
+    max_delay: int | None = None,
     return_timedelta: bool = False,
-) -> Union[int, timedelta]:
+) -> int | timedelta:
     """
     Calculate exponential backoff delay.
 
@@ -70,7 +69,7 @@ def calculate_exponential_backoff(
 
 
 def calculate_linear_backoff(
-    retry_number: int, base_delay: int, max_delay: Optional[int] = None
+    retry_number: int, base_delay: int, max_delay: int | None = None
 ) -> int:
     """
     Calculate linear backoff delay.
@@ -156,9 +155,9 @@ def generate_retry_delays(
     max_retries: int,
     base_delay: int,
     strategy: str = "exponential",
-    max_delay: Optional[int] = None,
+    max_delay: int | None = None,
     return_timedeltas: bool = False,
-) -> List[Union[int, timedelta]]:
+) -> list[int | timedelta]:
     """
     Generate sequence of retry delays for all retry attempts.
 
@@ -207,7 +206,7 @@ def get_retry_delay_for_airflow(
     retry_number: int,
     strategy: str = "exponential",
     base_delay: int = 60,
-    max_delay: Optional[int] = None,
+    max_delay: int | None = None,
 ) -> timedelta:
     """
     Get retry delay as timedelta for Airflow task configuration.
@@ -235,7 +234,9 @@ def get_retry_delay_for_airflow(
     elif strategy == "fixed":
         delay_seconds = calculate_fixed_backoff(retry_number, base_delay)
     else:
-        raise ValueError(f"Unknown retry strategy: {strategy}. Use 'exponential', 'linear', or 'fixed'")
+        raise ValueError(
+            f"Unknown retry strategy: {strategy}. Use 'exponential', 'linear', or 'fixed'"
+        )
 
     return timedelta(seconds=delay_seconds)
 
@@ -244,8 +245,8 @@ def create_retry_config(
     max_retries: int,
     strategy: str = "exponential",
     base_delay: int = 60,
-    max_delay: Optional[int] = None,
-) -> Dict[str, any]:
+    max_delay: int | None = None,
+) -> dict[str, any]:
     """
     Create retry configuration dict for Airflow task default_args.
 

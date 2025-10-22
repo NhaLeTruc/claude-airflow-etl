@@ -9,11 +9,10 @@ Constitutional Compliance:
 - Principle V: Observability (ensures CI pipeline visibility)
 """
 
+from pathlib import Path
+
 import pytest
 import yaml
-from pathlib import Path
-import re
-
 
 # Path to GitHub workflows
 WORKFLOWS_DIR = Path(__file__).parents[2] / ".github" / "workflows"
@@ -49,7 +48,7 @@ class TestCIWorkflowStructure:
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             try:
                 workflow = yaml.safe_load(f)
                 assert workflow is not None, "Workflow file is empty"
@@ -61,64 +60,63 @@ class TestCIWorkflowStructure:
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        assert 'on' in workflow, "Workflow missing 'on' trigger configuration"
+        assert "on" in workflow, "Workflow missing 'on' trigger configuration"
 
-        triggers = workflow['on']
+        triggers = workflow["on"]
         # Support both list and dict formats
         if isinstance(triggers, list):
-            assert 'push' in triggers, "CI should trigger on push"
-            assert 'pull_request' in triggers, "CI should trigger on pull_request"
+            assert "push" in triggers, "CI should trigger on push"
+            assert "pull_request" in triggers, "CI should trigger on pull_request"
         elif isinstance(triggers, dict):
-            assert 'push' in triggers or 'pull_request' in triggers, \
-                "CI should trigger on push or pull_request"
+            assert (
+                "push" in triggers or "pull_request" in triggers
+            ), "CI should trigger on push or pull_request"
 
     def test_ci_workflow_has_required_jobs(self, ci_workflow_path):
         """Test that CI workflow has all required jobs."""
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        assert 'jobs' in workflow, "Workflow missing jobs section"
-        jobs = workflow['jobs']
+        assert "jobs" in workflow, "Workflow missing jobs section"
+        jobs = workflow["jobs"]
 
         # Required jobs
         required_jobs = {
-            'lint': 'Code linting with ruff/black',
-            'test': 'Unit and integration tests',
-            'dag-validation': 'DAG parsing validation',
+            "lint": "Code linting with ruff/black",
+            "test": "Unit and integration tests",
+            "dag-validation": "DAG parsing validation",
         }
 
         for job_name, job_description in required_jobs.items():
             # Job name might have variations (e.g., lint, linting, code-lint)
-            matching_jobs = [j for j in jobs.keys() if job_name.replace('-', '_') in j.replace('-', '_')]
-            assert len(matching_jobs) > 0, \
-                f"CI workflow missing '{job_name}' job ({job_description})"
+            matching_jobs = [j for j in jobs if job_name.replace("-", "_") in j.replace("-", "_")]
+            assert (
+                len(matching_jobs) > 0
+            ), f"CI workflow missing '{job_name}' job ({job_description})"
 
     def test_ci_workflow_uses_matrix_for_python_versions(self, ci_workflow_path):
         """Test that CI workflow tests multiple Python versions."""
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
         # Look for test job with matrix strategy
-        jobs = workflow.get('jobs', {})
-        test_jobs = [j for name, j in jobs.items() if 'test' in name.lower()]
+        jobs = workflow.get("jobs", {})
+        test_jobs = [j for name, j in jobs.items() if "test" in name.lower()]
 
         if not test_jobs:
             pytest.skip("No test job found in CI workflow")
 
         # At least one test job should use matrix
-        has_matrix = any(
-            'strategy' in job and 'matrix' in job['strategy']
-            for job in test_jobs
-        )
+        has_matrix = any("strategy" in job and "matrix" in job["strategy"] for job in test_jobs)
 
         # Matrix is recommended but not strictly required for initial implementation
         # This is more of a best practice check
@@ -134,16 +132,15 @@ class TestCIWorkflowSteps:
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        jobs = workflow.get('jobs', {})
+        jobs = workflow.get("jobs", {})
 
         for job_name, job_config in jobs.items():
-            steps = job_config.get('steps', [])
+            steps = job_config.get("steps", [])
             has_checkout = any(
-                step.get('uses', '').startswith('actions/checkout')
-                for step in steps
+                step.get("uses", "").startswith("actions/checkout") for step in steps
             )
             assert has_checkout, f"Job '{job_name}' missing checkout step"
 
@@ -152,16 +149,16 @@ class TestCIWorkflowSteps:
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        jobs = workflow.get('jobs', {})
+        jobs = workflow.get("jobs", {})
 
         # At least one job should set up Python
         has_python_setup = False
         for job_config in jobs.values():
-            steps = job_config.get('steps', [])
-            if any(step.get('uses', '').startswith('actions/setup-python') for step in steps):
+            steps = job_config.get("steps", [])
+            if any(step.get("uses", "").startswith("actions/setup-python") for step in steps):
                 has_python_setup = True
                 break
 
@@ -172,18 +169,18 @@ class TestCIWorkflowSteps:
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        jobs = workflow.get('jobs', {})
+        jobs = workflow.get("jobs", {})
 
         # At least one job should install dependencies
         has_dependency_install = False
         for job_config in jobs.values():
-            steps = job_config.get('steps', [])
+            steps = job_config.get("steps", [])
             for step in steps:
-                run_command = step.get('run', '')
-                if 'pip install' in run_command or 'requirements' in run_command:
+                run_command = step.get("run", "")
+                if "pip install" in run_command or "requirements" in run_command:
                     has_dependency_install = True
                     break
             if has_dependency_install:
@@ -206,7 +203,7 @@ class TestCDStagingWorkflow:
         if not cd_staging_workflow_path.exists():
             pytest.skip("Staging deployment workflow not yet created")
 
-        with open(cd_staging_workflow_path, 'r') as f:
+        with open(cd_staging_workflow_path) as f:
             try:
                 workflow = yaml.safe_load(f)
                 assert workflow is not None
@@ -218,19 +215,19 @@ class TestCDStagingWorkflow:
         if not cd_staging_workflow_path.exists():
             pytest.skip("Staging deployment workflow not yet created")
 
-        with open(cd_staging_workflow_path, 'r') as f:
+        with open(cd_staging_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        assert 'on' in workflow, "Staging workflow missing trigger"
-        triggers = workflow['on']
+        assert "on" in workflow, "Staging workflow missing trigger"
+        triggers = workflow["on"]
 
         # Should trigger on push to main or workflow_dispatch
         has_main_trigger = False
         if isinstance(triggers, dict):
-            if 'push' in triggers:
-                branches = triggers['push'].get('branches', [])
-                has_main_trigger = 'main' in branches or 'master' in branches
-            elif 'workflow_dispatch' in triggers:
+            if "push" in triggers:
+                branches = triggers["push"].get("branches", [])
+                has_main_trigger = "main" in branches or "master" in branches
+            elif "workflow_dispatch" in triggers:
                 has_main_trigger = True  # Manual trigger is acceptable
 
         assert has_main_trigger, "Staging should trigger on main branch or manual dispatch"
@@ -250,7 +247,7 @@ class TestCDProductionWorkflow:
         if not cd_production_workflow_path.exists():
             pytest.skip("Production deployment workflow not yet created")
 
-        with open(cd_production_workflow_path, 'r') as f:
+        with open(cd_production_workflow_path) as f:
             try:
                 workflow = yaml.safe_load(f)
                 assert workflow is not None
@@ -262,26 +259,24 @@ class TestCDProductionWorkflow:
         if not cd_production_workflow_path.exists():
             pytest.skip("Production deployment workflow not yet created")
 
-        with open(cd_production_workflow_path, 'r') as f:
+        with open(cd_production_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        assert 'on' in workflow, "Production workflow missing trigger"
-        triggers = workflow['on']
+        assert "on" in workflow, "Production workflow missing trigger"
+        triggers = workflow["on"]
 
         # Production should only trigger manually or with approval
         # workflow_dispatch = manual trigger
         # Or should have approval environment
-        is_manual = 'workflow_dispatch' in triggers
+        is_manual = "workflow_dispatch" in triggers
 
         # Alternative: check for environment with approval
-        jobs = workflow.get('jobs', {})
-        has_approval_env = any(
-            job.get('environment') is not None
-            for job in jobs.values()
-        )
+        jobs = workflow.get("jobs", {})
+        has_approval_env = any(job.get("environment") is not None for job in jobs.values())
 
-        assert is_manual or has_approval_env, \
-            "Production deployment should require manual trigger or approval environment"
+        assert (
+            is_manual or has_approval_env
+        ), "Production deployment should require manual trigger or approval environment"
 
 
 class TestWorkflowDependencies:
@@ -292,21 +287,22 @@ class TestWorkflowDependencies:
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        jobs = workflow.get('jobs', {})
+        jobs = workflow.get("jobs", {})
 
         for job_name, job_config in jobs.items():
-            if 'needs' in job_config:
-                needs = job_config['needs']
+            if "needs" in job_config:
+                needs = job_config["needs"]
                 # Ensure all needed jobs exist
                 if isinstance(needs, str):
                     needs = [needs]
 
                 for needed_job in needs:
-                    assert needed_job in jobs, \
-                        f"Job '{job_name}' depends on non-existent job '{needed_job}'"
+                    assert (
+                        needed_job in jobs
+                    ), f"Job '{job_name}' depends on non-existent job '{needed_job}'"
 
 
 class TestCoverageReporting:
@@ -317,18 +313,18 @@ class TestCoverageReporting:
         if not ci_workflow_path.exists():
             pytest.skip("CI workflow file not yet created")
 
-        with open(ci_workflow_path, 'r') as f:
+        with open(ci_workflow_path) as f:
             workflow = yaml.safe_load(f)
 
-        jobs = workflow.get('jobs', {})
+        jobs = workflow.get("jobs", {})
 
         # Look for coverage in test job
         has_coverage = False
         for job_config in jobs.values():
-            steps = job_config.get('steps', [])
+            steps = job_config.get("steps", [])
             for step in steps:
-                run_command = step.get('run', '')
-                if 'coverage' in run_command.lower() or '--cov' in run_command:
+                run_command = step.get("run", "")
+                if "coverage" in run_command.lower() or "--cov" in run_command:
                     has_coverage = True
                     break
             if has_coverage:
@@ -342,8 +338,7 @@ class TestCoverageReporting:
 @pytest.mark.integration
 def test_workflow_files_in_correct_location():
     """Test that workflow files are in .github/workflows/ directory."""
-    assert WORKFLOWS_DIR.exists(), \
-        f"Workflows directory not found at {WORKFLOWS_DIR}"
+    assert WORKFLOWS_DIR.exists(), f"Workflows directory not found at {WORKFLOWS_DIR}"
 
     # At minimum, CI workflow should exist
     ci_workflow = WORKFLOWS_DIR / "ci.yml"
@@ -365,9 +360,9 @@ def test_no_workflow_syntax_errors():
     errors = []
     for workflow_file in workflow_files:
         try:
-            with open(workflow_file, 'r') as f:
+            with open(workflow_file) as f:
                 yaml.safe_load(f)
         except yaml.YAMLError as e:
             errors.append(f"{workflow_file.name}: {e}")
 
-    assert len(errors) == 0, f"Workflow syntax errors:\n" + "\n".join(errors)
+    assert len(errors) == 0, "Workflow syntax errors:\n" + "\n".join(errors)

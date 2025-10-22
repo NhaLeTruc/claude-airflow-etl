@@ -5,13 +5,12 @@ Tests cover SMTP connection, template rendering, recipient validation,
 HTML/plain text support, and attachment handling.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock, call
-from datetime import datetime
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from airflow.exceptions import AirflowException
 import smtplib
+from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+from airflow.exceptions import AirflowException
 
 
 @pytest.fixture
@@ -100,7 +99,7 @@ class TestEmailNotificationOperator:
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_smtp_connection_success(self, mock_smtp, mock_context):
         """Test successful SMTP connection and authentication."""
         try:
@@ -128,7 +127,7 @@ class TestEmailNotificationOperator:
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_smtp_connection_failure(self, mock_smtp, mock_context):
         """Test SMTP connection failure handling."""
         try:
@@ -149,14 +148,16 @@ class TestEmailNotificationOperator:
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_smtp_authentication_failure(self, mock_smtp, mock_context):
         """Test SMTP authentication failure handling."""
         try:
             from src.operators.notifications.email_operator import EmailNotificationOperator
 
             mock_server = MagicMock()
-            mock_server.login.side_effect = smtplib.SMTPAuthenticationError(535, "Authentication failed")
+            mock_server.login.side_effect = smtplib.SMTPAuthenticationError(
+                535, "Authentication failed"
+            )
             mock_smtp.return_value.__enter__.return_value = mock_server
 
             operator = EmailNotificationOperator(
@@ -173,7 +174,7 @@ class TestEmailNotificationOperator:
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_plain_text_email_sending(self, mock_smtp, mock_context):
         """Test sending plain text email."""
         try:
@@ -196,7 +197,7 @@ class TestEmailNotificationOperator:
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_html_email_sending(self, mock_smtp, mock_context):
         """Test sending HTML email."""
         try:
@@ -219,7 +220,7 @@ class TestEmailNotificationOperator:
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_email_with_cc_and_bcc(self, mock_smtp, mock_context):
         """Test email with CC and BCC recipients."""
         try:
@@ -243,7 +244,7 @@ class TestEmailNotificationOperator:
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_template_rendering_in_subject(self, mock_smtp, mock_context):
         """Test Jinja2 template rendering in email subject."""
         try:
@@ -262,12 +263,11 @@ class TestEmailNotificationOperator:
             operator.execute(mock_context)
 
             # Verify subject was rendered
-            call_args = mock_server.send_message.call_args
             # Subject should contain "test_dag" and "2025-01-15"
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_template_rendering_in_body(self, mock_smtp, mock_context):
         """Test Jinja2 template rendering in email body."""
         try:
@@ -302,7 +302,7 @@ class TestEmailNotificationOperator:
                 files=["/path/to/file1.pdf", "/path/to/file2.csv"],
             )
 
-            assert hasattr(operator, 'files')
+            assert hasattr(operator, "files")
             assert len(operator.files) == 2
         except (ImportError, TypeError):
             pytest.skip("Attachment support not implemented")
@@ -348,15 +348,15 @@ class TestEmailNotificationOperator:
         try:
             from src.operators.notifications.email_operator import EmailNotificationOperator
 
-            assert hasattr(EmailNotificationOperator, 'template_fields')
+            assert hasattr(EmailNotificationOperator, "template_fields")
             template_fields = EmailNotificationOperator.template_fields
 
             # Should include at minimum: subject and message_template
-            assert 'subject' in template_fields or 'message_template' in template_fields
+            assert "subject" in template_fields or "message_template" in template_fields
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_retry_on_transient_smtp_error(self, mock_smtp, mock_context):
         """Test retry behavior on transient SMTP errors."""
         try:
@@ -388,8 +388,8 @@ class TestEmailNotificationOperator:
         try:
             from src.operators.notifications.email_operator import EmailNotificationOperator
 
-            assert hasattr(EmailNotificationOperator, 'ui_color')
+            assert hasattr(EmailNotificationOperator, "ui_color")
             # Email operators typically use blue/green colors
-            assert EmailNotificationOperator.ui_color.startswith('#')
+            assert EmailNotificationOperator.ui_color.startswith("#")
         except ImportError:
             pytest.skip("EmailNotificationOperator not implemented yet")

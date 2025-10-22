@@ -5,7 +5,6 @@ Tests that all JSON configurations in dags/config/ parse correctly
 and produce valid DAGs without errors.
 """
 
-import os
 from pathlib import Path
 
 import pytest
@@ -65,7 +64,7 @@ class TestDAGParsing:
         """Test that all tasks use valid operator types."""
         dag_bag = DagBag(dag_folder="dags/", include_examples=False)
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 # Task should have a valid operator class
                 assert task.__class__.__name__ is not None
@@ -75,8 +74,8 @@ class TestDAGParsing:
     def test_json_config_files_exist(self):
         """Test that JSON config directory structure exists."""
         config_dir = Path("dags/config")
-        examples_dir = config_dir / "examples"
-        schemas_dir = config_dir / "schemas"
+        config_dir / "examples"
+        config_dir / "schemas"
 
         assert config_dir.exists(), "dags/config/ directory should exist"
         # examples_dir and schemas_dir will be created during implementation
@@ -107,7 +106,7 @@ class TestDAGParsing:
         """Test that all DAGs pass Airflow's validation."""
         dag_bag = DagBag(dag_folder="dags/", include_examples=False)
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             # Validate task dependencies
             for task in dag.tasks:
                 # Check that upstream tasks exist in DAG
@@ -142,7 +141,7 @@ class TestDAGParsing:
         # and verify multiple DAGs are created
 
         # For now, just verify the mechanism exists
-        dag_bag = DagBag(dag_folder="dags/", include_examples=False)
+        DagBag(dag_folder="dags/", include_examples=False)
         # Count should match number of valid JSON configs
 
     def test_invalid_config_does_not_break_other_dags(self):
@@ -150,7 +149,7 @@ class TestDAGParsing:
         # The factory should handle errors gracefully and log them
         # without preventing valid DAGs from being created
 
-        dag_bag = DagBag(dag_folder="dags/", include_examples=False)
+        DagBag(dag_folder="dags/", include_examples=False)
 
         # Even if there are errors, valid DAGs should still load
         # (This behavior depends on implementation - could be strict or lenient)
@@ -159,15 +158,15 @@ class TestDAGParsing:
         """Test that DAG tags from config are applied."""
         dag_bag = DagBag(dag_folder="dags/", include_examples=False)
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             # DAGs from JSON configs should have tags
-            assert isinstance(dag.tags, (list, set))
+            assert isinstance(dag.tags, list | set)
 
     def test_dag_default_args_applied(self):
         """Test that default_args from config are applied to tasks."""
         dag_bag = DagBag(dag_folder="dags/", include_examples=False)
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 # Tasks should have owner set (from default_args or task params)
                 assert hasattr(task, "owner")

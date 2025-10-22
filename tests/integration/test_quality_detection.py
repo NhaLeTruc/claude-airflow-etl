@@ -5,13 +5,12 @@ Tests ensure quality operators detect intentionally injected data anomalies
 in the seed data. This validates that quality checks work end-to-end.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from airflow.models import DagBag, DagRun, TaskInstance
-from airflow.utils.state import DagRunState, TaskInstanceState
-from airflow.utils.types import DagRunType
-from airflow.exceptions import AirflowException
 from unittest.mock import Mock, patch
+
+import pytest
+from airflow.exceptions import AirflowException
+from airflow.models import DagBag, TaskInstance
 
 
 @pytest.fixture
@@ -41,11 +40,13 @@ def warehouse_with_quality_issues():
     hook = Mock()
 
     # Schema validation - missing column
-    hook.get_records = Mock(return_value=[
-        ("customer_id", "integer", "NO", 1),
-        ("customer_name", "character varying", "YES", 2),
-        # Missing "email" column that should be present
-    ])
+    hook.get_records = Mock(
+        return_value=[
+            ("customer_id", "integer", "NO", 1),
+            ("customer_name", "character varying", "YES", 2),
+            # Missing "email" column that should be present
+        ]
+    )
 
     # Completeness - low row count
     hook.get_first = Mock(return_value=(50,))  # Expected 1000, got 50
@@ -67,7 +68,8 @@ class TestSchemaValidationDetection:
 
         # Find schema validation task
         schema_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "schema" in task.task_id.lower() and "validat" in task.task_id.lower()
         ]
 
@@ -107,10 +109,7 @@ class TestSchemaValidationDetection:
 
         dag = dag_bag.get_dag(dag_id)
 
-        schema_tasks = [
-            task for task in dag.tasks
-            if "schema" in task.task_id.lower()
-        ]
+        schema_tasks = [task for task in dag.tasks if "schema" in task.task_id.lower()]
 
         if len(schema_tasks) == 0:
             pytest.skip("No schema validation in this DAG")
@@ -133,7 +132,8 @@ class TestCompletenessDetection:
         dag = dag_bag.get_dag(dag_id)
 
         completeness_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "completeness" in task.task_id.lower() or "row_count" in task.task_id.lower()
         ]
 
@@ -167,10 +167,7 @@ class TestCompletenessDetection:
 
         dag = dag_bag.get_dag(dag_id)
 
-        completeness_tasks = [
-            task for task in dag.tasks
-            if "completeness" in task.task_id.lower()
-        ]
+        completeness_tasks = [task for task in dag.tasks if "completeness" in task.task_id.lower()]
 
         if len(completeness_tasks) == 0:
             pytest.skip("No completeness check in this DAG")
@@ -197,7 +194,7 @@ class TestCompletenessDetection:
         if dag_id not in dag_bag.dags:
             pytest.skip(f"{dag_id} not implemented yet")
 
-        dag = dag_bag.get_dag(dag_id)
+        dag_bag.get_dag(dag_id)
 
         with patch("src.hooks.warehouse_hook.WarehouseHook") as mock_hook_class:
             mock_hook = Mock()
@@ -220,7 +217,8 @@ class TestFreshnessDetection:
         dag = dag_bag.get_dag(dag_id)
 
         freshness_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "freshness" in task.task_id.lower() or "stale" in task.task_id.lower()
         ]
 
@@ -252,7 +250,7 @@ class TestFreshnessDetection:
         if dag_id not in dag_bag.dags:
             pytest.skip(f"{dag_id} not implemented yet")
 
-        dag = dag_bag.get_dag(dag_id)
+        dag_bag.get_dag(dag_id)
 
         with patch("src.hooks.warehouse_hook.WarehouseHook") as mock_hook_class:
             mock_hook = Mock()
@@ -278,7 +276,8 @@ class TestUniquenessDetection:
         dag = dag_bag.get_dag(dag_id)
 
         uniqueness_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "uniqueness" in task.task_id.lower() or "duplicate" in task.task_id.lower()
         ]
 
@@ -320,8 +319,10 @@ class TestNullRateDetection:
         dag = dag_bag.get_dag(dag_id)
 
         null_rate_tasks = [
-            task for task in dag.tasks
-            if "null" in task.task_id.lower() and ("rate" in task.task_id.lower() or "check" in task.task_id.lower())
+            task
+            for task in dag.tasks
+            if "null" in task.task_id.lower()
+            and ("rate" in task.task_id.lower() or "check" in task.task_id.lower())
         ]
 
         assert len(null_rate_tasks) > 0, "Should have NULL rate check task"
@@ -375,7 +376,7 @@ class TestComprehensiveQualityDAG:
 
         for task in dag.tasks:
             task_id_lower = task.task_id.lower()
-            for check_type in quality_check_types.keys():
+            for check_type in quality_check_types:
                 if check_type in task_id_lower:
                     quality_check_types[check_type] = True
 
@@ -403,10 +404,13 @@ class TestComprehensiveQualityDAG:
         dag = dag_bag.get_dag(dag_id)
 
         # Verify notification tasks exist for quality failures
-        notification_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["notify", "alert", "notification", "email", "teams", "telegram"])
+        [
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["notify", "alert", "notification", "email", "teams", "telegram"]
+            )
         ]
 
         # Should have at least one notification task
@@ -423,24 +427,25 @@ class TestComprehensiveQualityDAG:
 
         # Find quality check tasks
         quality_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["quality", "check", "validat"])
+            task
+            for task in dag.tasks
+            if any(keyword in task.task_id.lower() for keyword in ["quality", "check", "validat"])
         ]
 
         # Find downstream processing tasks
         processing_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["load", "transform", "process", "aggregate"])
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["load", "transform", "process", "aggregate"]
+            )
         ]
 
         # Quality checks should be upstream of processing
         # (This enforces fail-fast on bad data)
         for process_task in processing_tasks:
             upstream_ids = [t.task_id for t in process_task.upstream_list]
-            has_quality_upstream = any(
-                qt.task_id in upstream_ids for qt in quality_tasks
-            )
+            any(qt.task_id in upstream_ids for qt in quality_tasks)
             # Not all processing tasks need quality checks upstream
             # But at least some should

@@ -9,11 +9,11 @@ from src.operators.quality.base_quality_operator import (
     BaseQualityOperator,
     QualitySeverity,
 )
-from src.operators.quality.schema_validator import SchemaValidator
 from src.operators.quality.completeness_checker import CompletenessChecker
 from src.operators.quality.freshness_checker import FreshnessChecker
-from src.operators.quality.uniqueness_checker import UniquenessChecker
 from src.operators.quality.null_rate_checker import NullRateChecker
+from src.operators.quality.schema_validator import SchemaValidator
+from src.operators.quality.uniqueness_checker import UniquenessChecker
 
 __all__ = [
     "BaseQualityOperator",

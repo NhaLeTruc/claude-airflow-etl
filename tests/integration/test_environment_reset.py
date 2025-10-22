@@ -54,7 +54,7 @@ class TestEnvironmentReset:
         services = compose_config.get("services", {})
 
         # Check warehouse has initialization
-        warehouse = services.get("postgres-warehouse", {})
+        services.get("postgres-warehouse", {})
         # Should have build or init mechanism
 
     def test_airflow_database_reinitializes(self):
@@ -117,7 +117,7 @@ class TestEnvironmentReset:
         scheduler = services.get("airflow-scheduler", {})
         volumes = scheduler.get("volumes", [])
 
-        volumes_str = str(volumes)
+        str(volumes)
         # Logs directory handling
 
     def test_config_files_persist_after_reset(self):
@@ -202,7 +202,7 @@ class TestEnvironmentReset:
         with open("docker-compose.yml") as f:
             compose_config = yaml.safe_load(f)
 
-        services = compose_config.get("services", {})
+        compose_config.get("services", {})
 
         # Check depends_on uses health check conditions
         # This ensures proper startup order

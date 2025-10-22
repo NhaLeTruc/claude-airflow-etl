@@ -12,17 +12,16 @@ Constitutional Compliance:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from great_expectations.core import ExpectationSuite, ExpectationConfiguration
+from great_expectations.checkpoint import SimpleCheckpoint
+from great_expectations.core import ExpectationConfiguration, ExpectationSuite
 from great_expectations.core.batch import RuntimeBatchRequest
 from great_expectations.data_context import DataContext
 from great_expectations.data_context.types.base import (
     DataContextConfig,
     FilesystemStoreBackendDefaults,
 )
-from great_expectations.checkpoint import SimpleCheckpoint
-
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +39,8 @@ class GreatExpectationsHelper:
 
     def __init__(
         self,
-        context_root_dir: Optional[str] = None,
-        expectations_dir: Optional[str] = None,
+        context_root_dir: str | None = None,
+        expectations_dir: str | None = None,
     ):
         """Initialize Great Expectations helper.
 
@@ -92,19 +91,17 @@ class GreatExpectationsHelper:
         suite_path = self.expectations_dir / f"{suite_name}.json"
         if not suite_path.exists():
             raise FileNotFoundError(
-                f"Expectation suite not found: {suite_path}. "
-                f"Tried GE store and filesystem."
+                f"Expectation suite not found: {suite_path}. " f"Tried GE store and filesystem."
             )
 
-        with open(suite_path, "r") as f:
+        with open(suite_path) as f:
             suite_dict = json.load(f)
 
         # Convert to ExpectationSuite object
         suite = ExpectationSuite(
             expectation_suite_name=suite_name,
             expectations=[
-                ExpectationConfiguration(**exp)
-                for exp in suite_dict.get("expectations", [])
+                ExpectationConfiguration(**exp) for exp in suite_dict.get("expectations", [])
             ],
             meta=suite_dict.get("meta", {}),
         )
@@ -119,8 +116,8 @@ class GreatExpectationsHelper:
         self,
         suite_name: str,
         dataset: Any,
-        batch_request_config: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        batch_request_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Validate a dataset against an expectation suite.
 
         Args:
@@ -138,7 +135,7 @@ class GreatExpectationsHelper:
         Raises:
             ValueError: If validation fails to execute
         """
-        suite = self.load_expectation_suite(suite_name)
+        self.load_expectation_suite(suite_name)
 
         # Create batch request
         if batch_request_config is None:
@@ -184,7 +181,7 @@ class GreatExpectationsHelper:
             logger.error(f"Validation failed for suite '{suite_name}': {e}")
             raise ValueError(f"Validation execution failed: {e}") from e
 
-    def _parse_validation_result(self, checkpoint_result: Any) -> Dict[str, Any]:
+    def _parse_validation_result(self, checkpoint_result: Any) -> dict[str, Any]:
         """Parse Great Expectations validation result into simplified format.
 
         Args:
@@ -216,12 +213,16 @@ class GreatExpectationsHelper:
         # Parse individual expectation results
         results_list = []
         for result in validation_result.get("results", []):
-            results_list.append({
-                "expectation_type": result.get("expectation_config", {}).get("expectation_type"),
-                "success": result.get("success"),
-                "exception_info": result.get("exception_info"),
-                "result": result.get("result", {}),
-            })
+            results_list.append(
+                {
+                    "expectation_type": result.get("expectation_config", {}).get(
+                        "expectation_type"
+                    ),
+                    "success": result.get("success"),
+                    "exception_info": result.get("exception_info"),
+                    "result": result.get("result", {}),
+                }
+            )
 
         return {
             "success": validation_result.get("success", False),
@@ -238,7 +239,7 @@ class GreatExpectationsHelper:
     def create_expectation_suite_from_config(
         self,
         suite_name: str,
-        expectations_config: List[Dict[str, Any]],
+        expectations_config: list[dict[str, Any]],
         save_to_store: bool = True,
     ) -> ExpectationSuite:
         """Create an expectation suite from configuration dictionary.
@@ -280,7 +281,7 @@ class GreatExpectationsHelper:
 
         return suite
 
-    def get_validation_summary(self, validation_result: Dict[str, Any]) -> str:
+    def get_validation_summary(self, validation_result: dict[str, Any]) -> str:
         """Generate human-readable summary of validation results.
 
         Args:
@@ -313,7 +314,7 @@ class GreatExpectationsHelper:
         return "\n".join(summary_lines)
 
 
-def load_expectations_from_json(json_path: str) -> List[Dict[str, Any]]:
+def load_expectations_from_json(json_path: str) -> list[dict[str, Any]]:
     """Load expectation configurations from JSON file.
 
     Utility function for loading expectation suite configurations from
@@ -333,7 +334,7 @@ def load_expectations_from_json(json_path: str) -> List[Dict[str, Any]]:
     if not path.exists():
         raise FileNotFoundError(f"Expectations JSON file not found: {json_path}")
 
-    with open(path, "r") as f:
+    with open(path) as f:
         config = json.load(f)
 
     # Support both direct list and wrapped format

@@ -7,7 +7,7 @@ Loads and validates configuration from environment variables and files.
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -24,7 +24,7 @@ class ConfigLoader:
     type conversion and default values.
     """
 
-    def __init__(self, env_file: Optional[str] = None) -> None:
+    def __init__(self, env_file: str | None = None) -> None:
         """
         Initialize configuration loader.
 
@@ -38,7 +38,7 @@ class ConfigLoader:
 
         logger.debug("Configuration loader initialized")
 
-    def get_str(self, key: str, default: Optional[str] = None, required: bool = False) -> str:
+    def get_str(self, key: str, default: str | None = None, required: bool = False) -> str:
         """
         Get string configuration value.
 
@@ -60,7 +60,7 @@ class ConfigLoader:
             raise ValueError(msg)
         return value or ""
 
-    def get_int(self, key: str, default: Optional[int] = None, required: bool = False) -> int:
+    def get_int(self, key: str, default: int | None = None, required: bool = False) -> int:
         """
         Get integer configuration value.
 
@@ -117,7 +117,7 @@ class ConfigLoader:
 
         return value.lower() in ("true", "yes", "1", "on")
 
-    def get_json(self, key: str, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def get_json(self, key: str, default: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Get JSON configuration value.
 
@@ -142,7 +142,7 @@ class ConfigLoader:
             logger.error(msg)
             raise ValueError(msg) from e
 
-    def load_warehouse_config(self) -> Dict[str, Any]:
+    def load_warehouse_config(self) -> dict[str, Any]:
         """
         Load warehouse database configuration.
 
@@ -159,7 +159,7 @@ class ConfigLoader:
         logger.info("Warehouse configuration loaded", host=config["host"], db=config["database"])
         return config
 
-    def load_smtp_config(self) -> Optional[Dict[str, Any]]:
+    def load_smtp_config(self) -> dict[str, Any] | None:
         """
         Load SMTP configuration for email notifications.
 
@@ -182,7 +182,7 @@ class ConfigLoader:
         logger.info("SMTP configuration loaded", host=config["host"])
         return config
 
-    def load_teams_config(self) -> Optional[str]:
+    def load_teams_config(self) -> str | None:
         """
         Load Microsoft Teams webhook URL.
 
@@ -194,7 +194,7 @@ class ConfigLoader:
             logger.info("Teams webhook configured")
         return webhook_url
 
-    def load_telegram_config(self) -> Optional[Dict[str, str]]:
+    def load_telegram_config(self) -> dict[str, str] | None:
         """
         Load Telegram bot configuration.
 
@@ -211,7 +211,7 @@ class ConfigLoader:
         logger.info("Telegram configuration loaded")
         return {"bot_token": bot_token, "chat_id": chat_id}
 
-    def load_dag_config_from_file(self, config_path: str) -> Dict[str, Any]:
+    def load_dag_config_from_file(self, config_path: str) -> dict[str, Any]:
         """
         Load DAG configuration from JSON file.
 
@@ -243,7 +243,7 @@ class ConfigLoader:
 
 
 # Global config loader instance
-_config_loader: Optional[ConfigLoader] = None
+_config_loader: ConfigLoader | None = None
 
 
 def get_config_loader() -> ConfigLoader:

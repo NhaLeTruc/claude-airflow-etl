@@ -5,10 +5,10 @@ Tests cover timestamp comparison, max age validation, SLA compliance,
 and staleness detection.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime, timedelta
-from airflow.exceptions import AirflowException
+from unittest.mock import Mock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ class TestFreshnessChecker:
             # Data from 1 hour ago (fresh)
             recent_timestamp = datetime.now() - timedelta(hours=1)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = recent_timestamp
 
                 result = operator.execute(mock_context)
@@ -85,7 +85,7 @@ class TestFreshnessChecker:
             # Data from 48 hours ago (stale)
             old_timestamp = datetime.now() - timedelta(hours=48)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = old_timestamp
 
                 result = operator.execute(mock_context)
@@ -109,7 +109,7 @@ class TestFreshnessChecker:
             # Data from exactly 12 hours ago
             timestamp_12h_ago = datetime.now() - timedelta(hours=12)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = timestamp_12h_ago
 
                 result = operator.execute(mock_context)
@@ -132,7 +132,7 @@ class TestFreshnessChecker:
             # Data from 15 minutes ago
             timestamp_15m_ago = datetime.now() - timedelta(minutes=15)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = timestamp_15m_ago
 
                 result = operator.execute(mock_context)
@@ -156,7 +156,7 @@ class TestFreshnessChecker:
             # Data loaded 1 hour ago (within SLA)
             timestamp_1h_ago = datetime.now() - timedelta(hours=1)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = timestamp_1h_ago
 
                 result = operator.execute(mock_context)
@@ -177,7 +177,7 @@ class TestFreshnessChecker:
                 max_age_hours=24,
             )
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = None  # NULL timestamp
 
                 result = operator.execute(mock_context)
@@ -198,7 +198,7 @@ class TestFreshnessChecker:
                 max_age_hours=24,
             )
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = None
 
                 result = operator.execute(mock_context)
@@ -222,7 +222,7 @@ class TestFreshnessChecker:
 
             recent_ts = datetime.now() - timedelta(hours=12)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = recent_ts
 
                 result = operator.execute(mock_context)
@@ -233,8 +233,9 @@ class TestFreshnessChecker:
     def test_timezone_aware_timestamps(self, mock_context):
         """Test handling of timezone-aware timestamps."""
         try:
-            from src.operators.quality.freshness_checker import FreshnessChecker
             import pytz
+
+            from src.operators.quality.freshness_checker import FreshnessChecker
 
             operator = FreshnessChecker(
                 task_id="check_tz_aware",
@@ -246,7 +247,7 @@ class TestFreshnessChecker:
             # Timezone-aware timestamp (UTC)
             tz_timestamp = datetime.now(pytz.UTC) - timedelta(hours=12)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = tz_timestamp
 
                 result = operator.execute(mock_context)
@@ -269,7 +270,7 @@ class TestFreshnessChecker:
             # Future timestamp (clock skew or data error)
             future_timestamp = datetime.now() + timedelta(hours=2)
 
-            with patch.object(operator, 'get_max_timestamp') as mock_ts:
+            with patch.object(operator, "get_max_timestamp") as mock_ts:
                 mock_ts.return_value = future_timestamp
 
                 result = operator.execute(mock_context)
@@ -290,7 +291,7 @@ class TestFreshnessChecker:
                 max_age_hours=24,
             )
 
-            with patch.object(operator, 'get_max_timestamps') as mock_ts:
+            with patch.object(operator, "get_max_timestamps") as mock_ts:
                 mock_ts.return_value = {
                     "created_at": datetime.now() - timedelta(hours=48),
                     "updated_at": datetime.now() - timedelta(hours=12),  # Most recent

@@ -22,16 +22,17 @@ KEY AIRFLOW FEATURES:
 - Branching based on quality check outcomes
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+
 from airflow import DAG
+from airflow.operators.dummy import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.python import PythonOperator
-from airflow.operators.dummy import DummyOperator
 from airflow.utils.dates import days_ago
 
-from src.operators.quality.schema_validator import SchemaValidator
-from src.operators.quality.completeness_checker import CompletenessChecker
 from src.operators.quality.base_quality_operator import QualitySeverity
+from src.operators.quality.completeness_checker import CompletenessChecker
+from src.operators.quality.schema_validator import SchemaValidator
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -95,7 +96,11 @@ validate_schema = SchemaValidator(
         {"column_name": "zip_code", "data_type": "character varying", "nullable": True},
         {"column_name": "country", "data_type": "character varying", "nullable": True},
         {"column_name": "created_date", "data_type": "date", "nullable": True},
-        {"column_name": "last_modified_date", "data_type": "timestamp without time zone", "nullable": True},
+        {
+            "column_name": "last_modified_date",
+            "data_type": "timestamp without time zone",
+            "nullable": True,
+        },
     ],
     severity=QualitySeverity.CRITICAL,  # Fail pipeline on schema mismatch
     check_extra_columns=False,  # Allow extra columns (flexible)
@@ -114,6 +119,7 @@ check_row_count = CompletenessChecker(
     dag=dag,
 )
 
+
 # Task 4: Log quality check results
 def log_quality_results(**context):
     """Log quality check results for monitoring."""
@@ -131,9 +137,12 @@ def log_quality_results(**context):
     logger.info(
         "Quality checks completed",
         schema_passed=schema_result.get("passed", False) if schema_result else False,
-        completeness_passed=completeness_result.get("passed", False) if completeness_result else False,
+        completeness_passed=(
+            completeness_result.get("passed", False) if completeness_result else False
+        ),
         execution_date=context["ds"],
     )
+
 
 log_results = PythonOperator(
     task_id="log_quality_results",

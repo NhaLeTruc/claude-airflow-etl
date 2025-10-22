@@ -5,14 +5,15 @@ Tests K8s namespace, pod creation, cleanup, and Kubernetes-specific configuratio
 Following TDD approach - these tests should FAIL until implementation is complete.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
 
 # These imports will fail until implementation exists
 try:
-    from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
     from src.hooks.spark_hook import SparkJobStatus
+    from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
 except ImportError:
     SparkKubernetesOperator = None
     SparkJobStatus = None

@@ -5,9 +5,10 @@ Tests cover severity levels, threshold validation, result logging,
 and common quality check functionality.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from airflow.exceptions import AirflowException
 
 
@@ -199,7 +200,7 @@ class TestBaseQualityOperator:
         except ImportError:
             pytest.skip("BaseQualityOperator not implemented yet")
 
-    @patch('src.hooks.warehouse_hook.WarehouseHook')
+    @patch("src.hooks.warehouse_hook.WarehouseHook")
     def test_warehouse_connection(self, mock_hook, mock_context):
         """Test that operator connects to warehouse using hook."""
         try:
@@ -241,7 +242,7 @@ class TestBaseQualityOperator:
                 store_results=True,
             )
 
-            with patch.object(operator, 'store_result') as mock_store:
+            with patch.object(operator, "store_result") as mock_store:
                 operator.execute(mock_context)
                 # Verify store_result was called
                 mock_store.assert_called_once()
@@ -284,7 +285,7 @@ class TestBaseQualityOperator:
 
             operator = ColorCheck(task_id="test", table_name="test_table")
 
-            assert hasattr(operator, 'ui_color') or hasattr(BaseQualityOperator, 'ui_color')
+            assert hasattr(operator, "ui_color") or hasattr(BaseQualityOperator, "ui_color")
             # Quality operators typically use yellow/orange colors
         except ImportError:
             pytest.skip("BaseQualityOperator not implemented yet")
@@ -294,11 +295,11 @@ class TestBaseQualityOperator:
         try:
             from src.operators.quality.base_quality_operator import BaseQualityOperator
 
-            assert hasattr(BaseQualityOperator, 'template_fields')
+            assert hasattr(BaseQualityOperator, "template_fields")
             template_fields = BaseQualityOperator.template_fields
 
             # Table name should be templatable
-            assert 'table_name' in template_fields
+            assert "table_name" in template_fields
         except ImportError:
             pytest.skip("BaseQualityOperator not implemented yet")
 
@@ -309,7 +310,7 @@ class TestBaseQualityOperator:
 
             # Trying to instantiate without implementing perform_check should fail
             with pytest.raises(TypeError):
-                operator = BaseQualityOperator(
+                BaseQualityOperator(
                     task_id="abstract_test",
                     table_name="test_table",
                 )

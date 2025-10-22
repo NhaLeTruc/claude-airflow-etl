@@ -5,10 +5,8 @@ Tests that downstream tasks skip on upstream failure, parallel tasks continue,
 and state recovery works after interruption.
 """
 
-from datetime import datetime
-
 import pytest
-from airflow.models import DagBag, TaskInstance
+from airflow.models import DagBag
 from airflow.utils.state import State
 
 
@@ -25,7 +23,7 @@ class TestFailureHandling:
 
         # Find DAGs with dependencies
         dags_with_deps = []
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 if len(task.downstream_list) > 0:
                     dags_with_deps.append(dag)
@@ -47,7 +45,7 @@ class TestFailureHandling:
             pytest.skip("No DAGs available")
 
         # Find DAGs with parallel tasks (multiple tasks with no dependencies)
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             independent_tasks = [t for t in dag.tasks if len(t.upstream_list) == 0]
             if len(independent_tasks) >= 2:
                 # Found DAG with parallel tasks
@@ -65,7 +63,7 @@ class TestFailureHandling:
         # Check for various trigger rules
         trigger_rules_found = set()
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 if hasattr(task, "trigger_rule"):
                     trigger_rules_found.add(task.trigger_rule)
@@ -81,11 +79,10 @@ class TestFailureHandling:
             pytest.skip("No DAGs available")
 
         # Check for failure callbacks
-        has_failure_callback = False
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             if hasattr(dag, "default_args") and dag.default_args:
                 if "on_failure_callback" in dag.default_args:
-                    has_failure_callback = True
+                    pass
 
         # Failure callbacks are optional but recommended
 
@@ -115,7 +112,7 @@ class TestFailureHandling:
 
         # Check for tasks with cleanup-related names
         cleanup_tasks = []
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 if any(
                     keyword in task.task_id.lower()
@@ -134,7 +131,7 @@ class TestFailureHandling:
 
         # DAG state is persisted in database
         # After restart, DAGs should be recoverable from DagBag
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             # Verify DAG can be loaded
             assert dag.dag_id is not None
             assert dag.tasks is not None
@@ -219,7 +216,7 @@ class TestFailureHandling:
 
         # Find tasks with upstream dependencies
         dependent_tasks = []
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 if len(task.upstream_list) > 0:
                     dependent_tasks.append(task)
@@ -234,7 +231,7 @@ class TestFailureHandling:
             pytest.skip("No DAGs available")
 
         # Check for max_active_runs configuration
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             if hasattr(dag, "max_active_runs"):
                 # Should have a reasonable limit
                 assert dag.max_active_runs >= 1 or dag.max_active_runs is None
@@ -267,7 +264,7 @@ class TestFailureHandling:
             pytest.skip("No DAGs for end-to-end testing")
 
         # Verify DAG structure supports recovery
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             # DAG should have tasks
             assert len(dag.tasks) >= 0
 
@@ -279,10 +276,9 @@ class TestFailureHandling:
             pytest.skip("No DAGs available")
 
         # Check for SLA configuration
-        has_sla = False
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             if hasattr(dag, "sla_miss_callback") and dag.sla_miss_callback:
-                has_sla = True
+                pass
 
         # SLA is optional
 
@@ -294,7 +290,7 @@ class TestFailureHandling:
             pytest.skip("No DAGs available")
 
         # Verify dependency structure is intact
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 # All upstream tasks should be in DAG
                 for upstream in task.upstream_list:

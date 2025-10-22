@@ -29,15 +29,16 @@ BUSINESS VALUE:
 - Prevents data loss from updates
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+
 from airflow import DAG
+from airflow.operators.dummy import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.python import PythonOperator
-from airflow.operators.dummy import DummyOperator
 from airflow.utils.dates import days_ago
 
-from src.utils.logger import get_logger
 from src.hooks.warehouse_hook import WarehouseHook
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

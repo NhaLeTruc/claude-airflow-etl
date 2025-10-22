@@ -5,12 +5,11 @@ Tests that tasks retry the correct number of times with backoff,
 then fail permanently.
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
+from unittest.mock import Mock
 
 import pytest
-from airflow.models import DagBag, TaskInstance
-from airflow.utils.state import State
+from airflow.models import DagBag
 
 
 @pytest.mark.integration
@@ -80,7 +79,7 @@ class TestRetryBehavior:
 
         # Verify DAGs have retry configuration
         has_retry_config = False
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 if task.retries > 0:
                     has_retry_config = True
@@ -131,7 +130,7 @@ class TestRetryBehavior:
             pytest.skip("No DAGs available")
 
         # All DAGs should have tasks
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             assert len(dag.tasks) > 0
 
     def test_retry_count_logged_correctly(self):
@@ -161,7 +160,7 @@ class TestRetryBehavior:
         dag_bag = DagBag(dag_folder="dags/", include_examples=False)
 
         # Check JSON-configured DAGs have retry settings
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             # DAGs from JSON configs should have default_args
             if hasattr(dag, "default_args") and dag.default_args:
                 # May have retries in default_args
@@ -214,11 +213,10 @@ class TestRetryBehavior:
         dag_bag = DagBag(dag_folder="dags/", include_examples=False)
 
         # Check for tasks with callbacks
-        has_callbacks = False
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 if hasattr(task, "on_retry_callback") and task.on_retry_callback:
-                    has_callbacks = True
+                    pass
 
         # Callbacks are optional, so this is informational
 
@@ -230,7 +228,7 @@ class TestRetryBehavior:
             pytest.skip("No DAGs available")
 
         # Find tasks with dependencies and retries
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             for task in dag.tasks:
                 if task.retries > 0 and len(task.downstream_list) > 0:
                     # Task has both retries and dependencies

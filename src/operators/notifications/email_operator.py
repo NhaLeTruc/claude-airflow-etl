@@ -5,13 +5,11 @@ Custom operator for sending email notifications via SMTP with support for
 HTML/plain text, attachments, CC/BCC recipients, and template rendering.
 """
 
-import smtplib
 import re
-from typing import Any, Dict, List, Optional, Union
-from datetime import timedelta
-from email.mime.text import MIMEText
+import smtplib
 from email.mime.multipart import MIMEMultipart
-from pathlib import Path
+from email.mime.text import MIMEText
+from typing import Any
 
 from airflow.exceptions import AirflowException
 from airflow.utils.decorators import apply_defaults
@@ -51,18 +49,18 @@ class EmailNotificationOperator(BaseNotificationOperator):
     def __init__(
         self,
         *,
-        to: Union[str, List[str]],
+        to: str | list[str],
         subject: str,
         message_template: str,
-        from_email: Optional[str] = None,
-        cc: Optional[Union[str, List[str]]] = None,
-        bcc: Optional[Union[str, List[str]]] = None,
+        from_email: str | None = None,
+        cc: str | list[str] | None = None,
+        bcc: str | list[str] | None = None,
         html: bool = False,
-        files: Optional[List[str]] = None,
+        files: list[str] | None = None,
         smtp_host: str = "localhost",
         smtp_port: int = 587,
-        smtp_user: Optional[str] = None,
-        smtp_password: Optional[str] = None,
+        smtp_user: str | None = None,
+        smtp_password: str | None = None,
         use_ssl: bool = False,
         **kwargs,
     ):
@@ -96,9 +94,7 @@ class EmailNotificationOperator(BaseNotificationOperator):
             f"SMTP={smtp_host}:{smtp_port}, SSL={use_ssl}"
         )
 
-    def _validate_emails(
-        self, emails: Union[str, List[str]], field_name: str
-    ) -> Union[str, List[str]]:
+    def _validate_emails(self, emails: str | list[str], field_name: str) -> str | list[str]:
         """
         Validate email address format.
 
@@ -122,13 +118,11 @@ class EmailNotificationOperator(BaseNotificationOperator):
         else:
             raise ValueError(f"{field_name} must be a string or list of strings")
 
-    def _to_list(self, emails: Union[str, List[str]]) -> List[str]:
+    def _to_list(self, emails: str | list[str]) -> list[str]:
         """Convert email or list of emails to list."""
         return [emails] if isinstance(emails, str) else emails
 
-    def _create_message(
-        self, subject: str, body: str, context: Dict[str, Any]
-    ) -> MIMEMultipart:
+    def _create_message(self, subject: str, body: str, context: dict[str, Any]) -> MIMEMultipart:
         """
         Create email message with headers and body.
 
@@ -158,7 +152,7 @@ class EmailNotificationOperator(BaseNotificationOperator):
 
         return msg
 
-    def send_notification(self, message: str, context: Dict[str, Any]) -> bool:
+    def send_notification(self, message: str, context: dict[str, Any]) -> bool:
         """
         Send email notification via SMTP.
 
@@ -176,9 +170,7 @@ class EmailNotificationOperator(BaseNotificationOperator):
 
             # Get all recipients (To + CC + BCC)
             all_recipients = (
-                self._to_list(self.to)
-                + self._to_list(self.cc)
-                + self._to_list(self.bcc)
+                self._to_list(self.to) + self._to_list(self.cc) + self._to_list(self.bcc)
             )
 
             logger.info(
@@ -187,7 +179,7 @@ class EmailNotificationOperator(BaseNotificationOperator):
                     "subject": rendered_subject,
                     "to": self._to_list(self.to),
                     "smtp_host": self.smtp_host,
-                }
+                },
             )
 
             # Send email via SMTP
@@ -205,10 +197,7 @@ class EmailNotificationOperator(BaseNotificationOperator):
                         server.login(self.smtp_user, self.smtp_password)
                     server.send_message(msg)
 
-            logger.info(
-                f"Email sent successfully",
-                extra={"recipients": len(all_recipients)}
-            )
+            logger.info("Email sent successfully", extra={"recipients": len(all_recipients)})
             return True
 
         except smtplib.SMTPConnectError as e:

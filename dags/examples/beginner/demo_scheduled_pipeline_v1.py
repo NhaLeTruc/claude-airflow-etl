@@ -11,7 +11,7 @@ Demonstrates:
 This is a P1 MVP example showing resilient pipeline execution.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
@@ -29,7 +29,10 @@ START_DATE = datetime(2024, 1, 1)
 
 # Retry configuration: 3 retries with exponential backoff
 retry_config = create_retry_config(
-    max_retries=3, strategy="exponential", base_delay=60, max_delay=600  # 1 minute base  # 10 minutes max
+    max_retries=3,
+    strategy="exponential",
+    base_delay=60,
+    max_delay=600,  # 1 minute base  # 10 minutes max
 )
 
 # Timeout configuration: 30 minutes per task

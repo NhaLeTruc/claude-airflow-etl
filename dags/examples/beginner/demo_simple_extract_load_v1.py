@@ -22,7 +22,8 @@ KEY AIRFLOW FEATURES:
 - Airflow connections for database access
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+
 from airflow import DAG
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.utils.dates import days_ago

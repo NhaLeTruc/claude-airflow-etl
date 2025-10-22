@@ -4,12 +4,13 @@ Uniqueness Checker Operator for Apache Airflow.
 Validates uniqueness of key columns and detects duplicate records.
 """
 
-from typing import Any, Dict, List, Optional
-from airflow.utils.decorators import apply_defaults
-from airflow.exceptions import AirflowException
+from typing import Any
 
-from src.operators.quality.base_quality_operator import BaseQualityOperator
+from airflow.exceptions import AirflowException
+from airflow.utils.decorators import apply_defaults
+
 from src.hooks.warehouse_hook import WarehouseHook
+from src.operators.quality.base_quality_operator import BaseQualityOperator
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -38,9 +39,9 @@ class UniquenessChecker(BaseQualityOperator):
     def __init__(
         self,
         *,
-        key_columns: List[str],
+        key_columns: list[str],
         max_duplicate_percentage: float = 0.0,
-        where_clause: Optional[str] = None,
+        where_clause: str | None = None,
         exclude_nulls: bool = True,
         case_sensitive: bool = True,
         trim_whitespace: bool = False,
@@ -140,7 +141,7 @@ class UniquenessChecker(BaseQualityOperator):
         result = hook.get_first(query)
         return result[0] if result and result[0] else 0
 
-    def get_duplicate_rows(self) -> List[Dict[str, Any]]:
+    def get_duplicate_rows(self) -> list[dict[str, Any]]:
         """
         Get specific duplicate rows.
 
@@ -190,7 +191,7 @@ class UniquenessChecker(BaseQualityOperator):
             for row in results
         ]
 
-    def perform_check(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def perform_check(self, context: dict[str, Any]) -> dict[str, Any]:
         """
         Perform uniqueness check.
 
@@ -203,10 +204,7 @@ class UniquenessChecker(BaseQualityOperator):
             total_count = self.get_total_count()
 
             # Calculate percentage
-            if total_count > 0:
-                duplicate_percentage = (duplicate_count / total_count) * 100.0
-            else:
-                duplicate_percentage = 0.0
+            duplicate_percentage = duplicate_count / total_count * 100.0 if total_count > 0 else 0.0
 
             # Check if passed
             passed = duplicate_percentage <= self.max_duplicate_percentage

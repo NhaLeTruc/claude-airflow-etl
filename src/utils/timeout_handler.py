@@ -5,8 +5,9 @@ Provides functions for timeout detection, elapsed time calculation,
 and timeout configuration for Airflow tasks.
 """
 
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any
 
 from src.utils.logger import get_logger
 
@@ -84,8 +85,8 @@ class TimeoutContext:
             timeout_seconds: Timeout threshold in seconds
         """
         self.timeout_seconds = timeout_seconds
-        self.start_time: Optional[datetime] = None
-        self.end_time: Optional[datetime] = None
+        self.start_time: datetime | None = None
+        self.end_time: datetime | None = None
         self.timed_out = False
 
     def __enter__(self):
@@ -128,7 +129,7 @@ class TimeoutContext:
 
 def calculate_elapsed_time(
     start_time: datetime, end_time: datetime, return_timedelta: bool = False
-) -> Union[int, timedelta]:
+) -> int | timedelta:
     """
     Calculate elapsed time between start and end.
 
@@ -181,7 +182,7 @@ def calculate_timeout_remaining(
 
 
 def is_timeout_exceeded(
-    start_time: datetime, current_time: datetime, timeout_seconds: Optional[int] = None
+    start_time: datetime, current_time: datetime, timeout_seconds: int | None = None
 ) -> bool:
     """
     Check if timeout has been exceeded.
@@ -234,9 +235,7 @@ def should_warn_about_timeout(
     return elapsed >= warning_threshold and elapsed < timeout_seconds
 
 
-def get_timeout_status(
-    start_time: datetime, current_time: datetime, timeout_seconds: int
-) -> str:
+def get_timeout_status(start_time: datetime, current_time: datetime, timeout_seconds: int) -> str:
     """
     Get human-readable timeout status string.
 
@@ -301,8 +300,8 @@ def format_timeout_duration(seconds: int) -> str:
 
 
 def create_timeout_config(
-    timeout_seconds: int, on_timeout_callback: Optional[Callable] = None
-) -> Dict[str, Any]:
+    timeout_seconds: int, on_timeout_callback: Callable | None = None
+) -> dict[str, Any]:
     """
     Create timeout configuration dict for Airflow task.
 

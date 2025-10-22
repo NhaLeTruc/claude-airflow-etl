@@ -5,7 +5,7 @@ Registers built-in and custom Airflow operators and provides lookup
 and instantiation functionality for the DAG factory.
 """
 
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from airflow.models import BaseOperator
 from airflow.operators.bash import BashOperator
@@ -14,9 +14,9 @@ from airflow.operators.python import PythonOperator
 
 # Import custom Spark operators
 try:
+    from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
     from src.operators.spark.standalone_operator import SparkStandaloneOperator
     from src.operators.spark.yarn_operator import SparkYarnOperator
-    from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
 
     SPARK_OPERATORS_AVAILABLE = True
 except ImportError:
@@ -34,11 +34,11 @@ except ImportError:
 
 # Import custom data quality operators
 try:
-    from src.operators.quality.schema_validator import SchemaValidator
     from src.operators.quality.completeness_checker import CompletenessChecker
     from src.operators.quality.freshness_checker import FreshnessChecker
-    from src.operators.quality.uniqueness_checker import UniquenessChecker
     from src.operators.quality.null_rate_checker import NullRateChecker
+    from src.operators.quality.schema_validator import SchemaValidator
+    from src.operators.quality.uniqueness_checker import UniquenessChecker
 
     QUALITY_OPERATORS_AVAILABLE = True
 except ImportError:
@@ -64,7 +64,7 @@ class OperatorRegistry:
 
     def __init__(self) -> None:
         """Initialize operator registry with built-in operators."""
-        self._operators: Dict[str, Type[BaseOperator]] = {}
+        self._operators: dict[str, type[BaseOperator]] = {}
         self._register_builtin_operators()
         self._register_custom_operators()
         logger.debug("OperatorRegistry initialized", operator_count=len(self._operators))
@@ -127,7 +127,7 @@ class OperatorRegistry:
 
         logger.debug("Custom operators registered", count=len(custom_operators))
 
-    def register_operator(self, name: str, operator_class: Type[BaseOperator]) -> None:
+    def register_operator(self, name: str, operator_class: type[BaseOperator]) -> None:
         """
         Register an operator with the registry.
 
@@ -153,7 +153,7 @@ class OperatorRegistry:
         """
         return name in self._operators
 
-    def get_operator_class(self, name: str) -> Type[BaseOperator]:
+    def get_operator_class(self, name: str) -> type[BaseOperator]:
         """
         Get operator class by name.
 
@@ -173,7 +173,7 @@ class OperatorRegistry:
 
         return self._operators[name]
 
-    def list_registered(self) -> List[str]:
+    def list_registered(self) -> list[str]:
         """
         Get list of all registered operator names.
 
@@ -187,7 +187,7 @@ class OperatorRegistry:
         operator_name: str,
         task_id: str,
         dag: Any,
-        params: Dict[str, Any],
+        params: dict[str, Any],
     ) -> BaseOperator:
         """
         Create operator instance with given parameters.
@@ -227,7 +227,7 @@ class OperatorRegistry:
             logger.error(msg, task_id=task_id)
             raise
 
-    def get_operator_info(self, name: str) -> Dict[str, Any]:
+    def get_operator_info(self, name: str) -> dict[str, Any]:
         """
         Get operator metadata and information.
 
@@ -248,7 +248,7 @@ class OperatorRegistry:
 
 
 # Global registry instance
-_registry: Optional[OperatorRegistry] = None
+_registry: OperatorRegistry | None = None
 
 
 def get_default_registry() -> OperatorRegistry:

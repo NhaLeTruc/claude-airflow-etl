@@ -5,12 +5,13 @@ Tests ensure incremental DAGs can run multiple times without duplicates
 or unintended side effects. Critical for production ETL reliability.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from airflow.models import DagBag, DagRun, TaskInstance
-from airflow.utils.state import DagRunState, TaskInstanceState
-from airflow.utils.types import DagRunType
 from unittest.mock import Mock, patch
+
+import pytest
+from airflow.models import DagBag, TaskInstance
+from airflow.utils.state import DagRunState
+from airflow.utils.types import DagRunType
 
 
 @pytest.fixture
@@ -63,8 +64,6 @@ class TestIncrementalLoadIdempotency:
                 task_instance = TaskInstance(task, execution_date)
                 task_instance.run(ignore_ti_state=True)
 
-            first_run_calls = warehouse_connection.run.call_count
-
             # Second run (should be idempotent)
             warehouse_connection.run.reset_mock()
 
@@ -78,8 +77,6 @@ class TestIncrementalLoadIdempotency:
             for task in dag.tasks:
                 task_instance = TaskInstance(task, execution_date)
                 task_instance.run(ignore_ti_state=True)
-
-            second_run_calls = warehouse_connection.run.call_count
 
             # Both runs should succeed
             assert dag_run_1.state in [DagRunState.SUCCESS, DagRunState.RUNNING]
@@ -96,9 +93,12 @@ class TestIncrementalLoadIdempotency:
 
         # Verify watermark tracking tasks exist
         watermark_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["watermark", "checkpoint", "bookmark", "max_timestamp"])
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["watermark", "checkpoint", "bookmark", "max_timestamp"]
+            )
         ]
 
         # Should have at least one watermark-related task
@@ -176,9 +176,12 @@ class TestSCDType2Idempotency:
 
         # Verify effective date handling tasks
         scd_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["effective", "valid_from", "valid_to", "current_flag", "scd"])
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["effective", "valid_from", "valid_to", "current_flag", "scd"]
+            )
         ]
 
         assert len(scd_tasks) > 0, "SCD Type 2 should manage effective dates"
@@ -230,7 +233,8 @@ class TestSparkJobIdempotency:
         # Verify Spark operators have output modes that support idempotency
         # (e.g., overwrite mode, or append with deduplication)
         spark_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "spark" in task.task_id.lower() or "Spark" in task.__class__.__name__
         ]
 
@@ -250,10 +254,13 @@ class TestGeneralIdempotencyPrinciples:
         dag = dag_bag.get_dag(dag_id)
 
         # Should have truncate or delete task before load
-        truncate_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["truncate", "delete", "clear", "drop"])
+        [
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["truncate", "delete", "clear", "drop"]
+            )
         ]
 
         # This pattern ensures idempotency for full loads
@@ -291,7 +298,7 @@ class TestGeneralIdempotencyPrinciples:
             if dag_id not in dag_bag.dags:
                 continue
 
-            dag = dag_bag.get_dag(dag_id)
+            dag_bag.get_dag(dag_id)
 
             # Check for SQL operators with WHERE clauses
             # This is a best practice check

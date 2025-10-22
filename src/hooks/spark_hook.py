@@ -8,12 +8,9 @@ Supports job submission, status polling, log retrieval, and job termination.
 import subprocess
 import time
 from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-from datetime import datetime
 
-from airflow.hooks.base import BaseHook
 from airflow.exceptions import AirflowException
+from airflow.hooks.base import BaseHook
 
 from src.utils.logger import get_logger
 
@@ -57,7 +54,7 @@ class SparkHook(BaseHook):
         super().__init__()
         self.conn_id = conn_id
         self.verbose = verbose
-        self._jobs: Dict[str, subprocess.Popen] = {}
+        self._jobs: dict[str, subprocess.Popen] = {}
         self._connection = None
         self._master_url = None
         self._spark_binary = None
@@ -91,17 +88,17 @@ class SparkHook(BaseHook):
     def build_submit_command(
         self,
         application: str,
-        master: Optional[str] = None,
-        deploy_mode: Optional[str] = None,
-        name: Optional[str] = None,
-        conf: Optional[Dict[str, str]] = None,
-        application_args: Optional[List[str]] = None,
-        driver_memory: Optional[str] = None,
-        driver_cores: Optional[str] = None,
-        executor_memory: Optional[str] = None,
-        executor_cores: Optional[str] = None,
-        num_executors: Optional[str] = None,
-    ) -> List[str]:
+        master: str | None = None,
+        deploy_mode: str | None = None,
+        name: str | None = None,
+        conf: dict[str, str] | None = None,
+        application_args: list[str] | None = None,
+        driver_memory: str | None = None,
+        driver_cores: str | None = None,
+        executor_memory: str | None = None,
+        executor_cores: str | None = None,
+        num_executors: str | None = None,
+    ) -> list[str]:
         """
         Build spark-submit command with all parameters.
 
@@ -166,11 +163,11 @@ class SparkHook(BaseHook):
     def submit_job(
         self,
         application: str,
-        master: Optional[str] = None,
-        deploy_mode: Optional[str] = None,
-        name: Optional[str] = None,
-        conf: Optional[Dict[str, str]] = None,
-        application_args: Optional[List[str]] = None,
+        master: str | None = None,
+        deploy_mode: str | None = None,
+        name: str | None = None,
+        conf: dict[str, str] | None = None,
+        application_args: list[str] | None = None,
         **kwargs,
     ) -> str:
         """
@@ -241,7 +238,7 @@ class SparkHook(BaseHook):
             return SparkJobStatus.FAILED
 
     def wait_for_completion(
-        self, job_id: str, timeout: Optional[int] = None, poll_interval: int = 5
+        self, job_id: str, timeout: int | None = None, poll_interval: int = 5
     ) -> bool:
         """
         Wait for Spark job to complete.
@@ -311,7 +308,7 @@ class SparkHook(BaseHook):
         except Exception as e:
             logger.error(f"Error killing job {job_id}: {str(e)}")
 
-    def get_job_logs(self, job_id: str) -> Optional[str]:
+    def get_job_logs(self, job_id: str) -> str | None:
         """
         Retrieve logs for a Spark job.
 

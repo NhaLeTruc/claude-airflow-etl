@@ -6,16 +6,15 @@ Demonstrates Spark integration with PostgreSQL and data processing.
 """
 
 import sys
+
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import sum, count, avg, max, min, col
+from pyspark.sql.functions import avg, col, count, sum
 
 
 def main():
     """Run sales aggregation Spark job."""
     # Parse arguments
     if len(sys.argv) < 2:
-        print("Usage: sales_aggregation.py <warehouse_jdbc_url> [output_path]")
-        print("Example: sales_aggregation.py jdbc:postgresql://warehouse:5432/warehouse /tmp/sales_output")
         sys.exit(1)
 
     warehouse_url = sys.argv[1]
@@ -35,34 +34,22 @@ def main():
         .getOrCreate()
     )
 
-    print(f"Spark version: {spark.version}")
-    print(f"Warehouse URL: {warehouse_url}")
-    print(f"Output path: {output_path}")
-
     try:
         # Read fact sales table
-        print("\nReading FactSales table...")
-        fact_sales = spark.read.jdbc(
-            url=warehouse_url, table="FactSales", properties=db_properties
-        )
+        fact_sales = spark.read.jdbc(url=warehouse_url, table="FactSales", properties=db_properties)
 
-        print(f"Loaded {fact_sales.count()} sales records")
         fact_sales.printSchema()
 
         # Read dimension tables
-        print("\nReading dimension tables...")
         dim_customer = spark.read.jdbc(
             url=warehouse_url, table="DimCustomer", properties=db_properties
         )
         dim_product = spark.read.jdbc(
             url=warehouse_url, table="DimProduct", properties=db_properties
         )
-        dim_date = spark.read.jdbc(
-            url=warehouse_url, table="DimDate", properties=db_properties
-        )
+        dim_date = spark.read.jdbc(url=warehouse_url, table="DimDate", properties=db_properties)
 
         # Join fact with dimensions
-        print("\nJoining fact table with dimensions...")
         sales_enriched = (
             fact_sales.join(dim_customer, "CustomerKey")
             .join(dim_product, "ProductKey")
@@ -70,7 +57,6 @@ def main():
         )
 
         # Aggregate by product category
-        print("\n=== Sales by Product Category ===")
         category_sales = (
             sales_enriched.groupBy("Category")
             .agg(
@@ -85,7 +71,6 @@ def main():
         category_sales.show(truncate=False)
 
         # Aggregate by customer segment
-        print("\n=== Sales by Customer Segment ===")
         segment_sales = (
             sales_enriched.groupBy("CustomerSegment")
             .agg(
@@ -99,7 +84,6 @@ def main():
         segment_sales.show(truncate=False)
 
         # Monthly sales trend
-        print("\n=== Monthly Sales Trend (Last 12 months) ===")
         monthly_sales = (
             sales_enriched.groupBy("Year", "Month")
             .agg(
@@ -113,7 +97,6 @@ def main():
         monthly_sales.show(truncate=False)
 
         # Top products by revenue
-        print("\n=== Top 10 Products by Revenue ===")
         top_products = (
             sales_enriched.groupBy("ProductKey", "ProductName", "Category")
             .agg(
@@ -127,32 +110,21 @@ def main():
         top_products.show(truncate=False)
 
         # Save aggregated results
-        print(f"\nSaving results to {output_path}...")
 
         category_sales.write.mode("overwrite").parquet(f"{output_path}/category_sales")
         segment_sales.write.mode("overwrite").parquet(f"{output_path}/segment_sales")
         monthly_sales.write.mode("overwrite").parquet(f"{output_path}/monthly_sales")
         top_products.write.mode("overwrite").parquet(f"{output_path}/top_products")
 
-        print("Results saved successfully")
-
         # Summary statistics
-        print("\n=== Summary Statistics ===")
-        print(f"Total orders: {fact_sales.count()}")
-        print(f"Total revenue: ${fact_sales.agg(sum('TotalAmount')).collect()[0][0]:,.2f}")
-        print(f"Average order value: ${fact_sales.agg(avg('TotalAmount')).collect()[0][0]:,.2f}")
-        print(f"Number of customers: {dim_customer.count()}")
-        print(f"Number of products: {dim_product.count()}")
 
-    except Exception as e:
-        print(f"Error during sales aggregation: {str(e)}")
+    except Exception:
         import traceback
 
         traceback.print_exc()
         raise
     finally:
         spark.stop()
-        print("\nSpark session stopped")
 
 
 if __name__ == "__main__":

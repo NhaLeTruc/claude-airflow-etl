@@ -5,10 +5,9 @@ Tests job submission, status polling, and log retrieval functionality.
 Following TDD approach - these tests should FAIL until implementation is complete.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch, call
-from datetime import datetime
-from typing import Dict, Any
 
 # These imports will fail until implementation exists
 try:
@@ -129,7 +128,7 @@ class TestSparkHook:
         application = "/path/to/app.py"
         app_name = "MySparkJob"
 
-        job_id = spark_hook.submit_job(application=application, name=app_name)
+        spark_hook.submit_job(application=application, name=app_name)
 
         # Verify --name argument was passed
         call_args = mock_popen.call_args

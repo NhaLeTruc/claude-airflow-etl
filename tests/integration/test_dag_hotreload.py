@@ -4,7 +4,6 @@ Integration test for DAG hot-reload functionality.
 Tests that new DAG files appear in Airflow UI within acceptable time.
 """
 
-import os
 import time
 from pathlib import Path
 
@@ -44,7 +43,7 @@ class TestDAGHotReload:
         import yaml
 
         with open("docker-compose.yml") as f:
-            compose_config = yaml.safe_load(f)
+            yaml.safe_load(f)
 
         # Check if scheduler has appropriate configuration
         # Default Airflow refresh is acceptable for development
@@ -61,7 +60,7 @@ class TestDAGHotReload:
         subdirs = ["config/examples", "examples/beginner", "examples/advanced", "factory"]
 
         for subdir in subdirs:
-            subdir_path = dags_dir / subdir
+            dags_dir / subdir
             # Subdirectories should exist for organizing DAGs
             # (Some might be created dynamically)
 
@@ -92,7 +91,7 @@ class TestDAGHotReload:
         # Measure DAG parsing time
         start_time = time.time()
 
-        dag_bag = DagBag(dag_folder="dags/", include_examples=False)
+        DagBag(dag_folder="dags/", include_examples=False)
 
         parse_time = time.time() - start_time
 
@@ -100,7 +99,9 @@ class TestDAGHotReload:
         # Actual threshold depends on number of DAGs
         max_parse_time = 30
 
-        assert parse_time < max_parse_time, f"DAG parsing took {parse_time:.2f}s, should be < {max_parse_time}s"
+        assert (
+            parse_time < max_parse_time
+        ), f"DAG parsing took {parse_time:.2f}s, should be < {max_parse_time}s"
 
     def test_dag_count_matches_configs(self):
         """Test that number of DAGs matches number of config files."""
@@ -126,10 +127,10 @@ class TestDAGHotReload:
                 python_dags += len(list(example_advanced.glob("*.py"))) - 1  # Exclude __init__.py
 
             # Total expected DAGs
-            expected_count = config_count + python_dags
+            config_count + python_dags
 
             # Actual DAGs loaded
-            actual_count = len(dag_bag.dags)
+            len(dag_bag.dags)
 
             # Should match or be close
             # Some tolerance for factory overhead or missing configs
@@ -154,7 +155,7 @@ class TestDAGHotReload:
         dag_bag = DagBag(dag_folder="dags/", include_examples=False)
 
         # Check for JSON-configured DAGs
-        json_dag_ids = [dag_id for dag_id in dag_bag.dags.keys() if "v1" in dag_id or "simple" in dag_id]
+        [dag_id for dag_id in dag_bag.dags if "v1" in dag_id or "simple" in dag_id]
 
         # Should have some dynamically generated DAGs if configs exist
 
@@ -184,7 +185,7 @@ class TestDAGHotReload:
         import yaml
 
         with open("docker-compose.yml") as f:
-            compose_config = yaml.safe_load(f)
+            yaml.safe_load(f)
 
         # DAG serialization is default in Airflow 2.x
         # No specific test needed unless custom configuration
@@ -210,7 +211,7 @@ class TestDAGHotReload:
         import yaml
 
         with open("docker-compose.yml") as f:
-            compose_config = yaml.safe_load(f)
+            yaml.safe_load(f)
 
         # Check if PYTHONPATH is configured (might be in Dockerfile or compose)
         # This is set in Dockerfile as ENV PYTHONPATH
@@ -229,7 +230,7 @@ class TestDAGHotReload:
 
     def test_logs_directory_writable(self):
         """Test that logs directory is writable for DAG execution logs."""
-        logs_dir = Path("logs")
+        Path("logs")
 
         # Logs directory should exist or be creatable
         # Check if mounted as volume
@@ -243,5 +244,5 @@ class TestDAGHotReload:
         scheduler = services.get("airflow-scheduler", {})
         volumes = scheduler.get("volumes", [])
 
-        volumes_str = str(volumes)
+        str(volumes)
         # Logs should be mounted for persistence and access

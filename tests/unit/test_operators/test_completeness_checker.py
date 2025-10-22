@@ -5,9 +5,10 @@ Tests cover row count validation, min/max/expected counts, tolerance calculation
 and empty table detection.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
 from airflow.exceptions import AirflowException
 
 
@@ -60,7 +61,7 @@ class TestCompletenessChecker:
                 max_count=1100,
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.return_value = 1000  # Within range
 
                 result = operator.execute(mock_context)
@@ -80,7 +81,7 @@ class TestCompletenessChecker:
                 min_count=1000,
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.return_value = 500  # Below minimum
 
                 result = operator.execute(mock_context)
@@ -101,7 +102,7 @@ class TestCompletenessChecker:
                 max_count=1000,
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.return_value = 1500  # Above maximum
 
                 result = operator.execute(mock_context)
@@ -123,7 +124,7 @@ class TestCompletenessChecker:
                 tolerance_percent=10,  # ±10%
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 # 950 is within 10% of 1000 (900-1100 range)
                 mock_count.return_value = 950
 
@@ -146,7 +147,7 @@ class TestCompletenessChecker:
                 tolerance_percent=5,  # ±5% = 950-1050
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 # Test boundary values
                 mock_count.return_value = 949  # Just outside tolerance
 
@@ -171,7 +172,7 @@ class TestCompletenessChecker:
                 min_count=1,  # Require at least 1 row
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.return_value = 0
 
                 result = operator.execute(mock_context)
@@ -192,7 +193,7 @@ class TestCompletenessChecker:
                 # No min_count specified
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.return_value = 0
 
                 result = operator.execute(mock_context)
@@ -213,7 +214,7 @@ class TestCompletenessChecker:
                 min_count=100,
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.return_value = 150
 
                 result = operator.execute(mock_context)
@@ -236,7 +237,7 @@ class TestCompletenessChecker:
                 min_count=1000,
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.return_value = 1500
 
                 result = operator.execute(mock_context)
@@ -256,8 +257,8 @@ class TestCompletenessChecker:
                 comparison_tolerance_percent=20,  # Allow ±20% variance
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
-                with patch.object(operator, 'get_previous_count') as mock_prev:
+            with patch.object(operator, "get_row_count") as mock_count:
+                with patch.object(operator, "get_previous_count") as mock_prev:
                     mock_count.return_value = 1100
                     mock_prev.return_value = 1000
 
@@ -279,8 +280,8 @@ class TestCompletenessChecker:
                 compare_with_previous=True,
             )
 
-            with patch.object(operator, 'get_row_count') as mock_count:
-                with patch.object(operator, 'get_previous_count') as mock_prev:
+            with patch.object(operator, "get_row_count") as mock_count:
+                with patch.object(operator, "get_previous_count") as mock_prev:
                     mock_count.return_value = 1200
                     mock_prev.return_value = 1000
 
@@ -304,7 +305,7 @@ class TestCompletenessChecker:
             )
 
             # Should either sanitize or fail safely
-            with patch.object(operator, 'get_row_count') as mock_count:
+            with patch.object(operator, "get_row_count") as mock_count:
                 mock_count.side_effect = Exception("Invalid table name")
 
                 with pytest.raises((AirflowException, Exception)):

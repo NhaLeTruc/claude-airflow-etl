@@ -5,11 +5,12 @@ Tests cover retry logic, error handling, fallback mechanisms, template rendering
 and timeout behavior.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
+
+import pytest
 from airflow.exceptions import AirflowException
-from jinja2 import Template, TemplateError
+from jinja2 import TemplateError
 
 
 @pytest.fixture
@@ -139,9 +140,11 @@ class TestBaseNotificationOperator:
             )
 
             # Mock the send_notification method to fail
-            with patch.object(operator, 'send_notification', side_effect=Exception("Network error")):
-                with pytest.raises(AirflowException):
-                    operator.execute(mock_context)
+            with (
+                patch.object(operator, "send_notification", side_effect=Exception("Network error")),
+                pytest.raises(AirflowException),
+            ):
+                operator.execute(mock_context)
 
             # Verify retry count in context
             assert mock_context["task_instance"].try_number <= 4  # Initial + 3 retries
@@ -177,7 +180,7 @@ class TestBaseNotificationOperator:
             )
 
             # This test checks if the feature exists
-            assert hasattr(operator, 'retry_exponential_backoff')
+            assert hasattr(operator, "retry_exponential_backoff")
         except (ImportError, AttributeError):
             pytest.skip("Exponential backoff not implemented or not supported")
 
@@ -207,7 +210,7 @@ class TestBaseNotificationOperator:
                 retries=0,
             )
 
-            with patch.object(operator, 'send_notification', side_effect=Exception("Test error")):
+            with patch.object(operator, "send_notification", side_effect=Exception("Test error")):
                 with pytest.raises(AirflowException):
                     operator.execute(mock_context)
 
@@ -228,7 +231,7 @@ class TestBaseNotificationOperator:
                 fallback_method="log",  # Fall back to logging if sending fails
             )
 
-            assert hasattr(operator, 'fallback_method')
+            assert hasattr(operator, "fallback_method")
         except (ImportError, AttributeError, TypeError):
             pytest.skip("Fallback mechanism not implemented")
 
@@ -243,7 +246,9 @@ class TestBaseNotificationOperator:
                 retries=0,
             )
 
-            with patch.object(operator, 'send_notification', side_effect=ValueError("Invalid input")):
+            with patch.object(
+                operator, "send_notification", side_effect=ValueError("Invalid input")
+            ):
                 try:
                     operator.execute(mock_context)
                 except AirflowException as e:
@@ -259,9 +264,9 @@ class TestBaseNotificationOperator:
             from src.operators.notifications.base_notification import BaseNotificationOperator
 
             # Airflow operators should define template_fields for templating support
-            assert hasattr(BaseNotificationOperator, 'template_fields')
-            assert isinstance(BaseNotificationOperator.template_fields, (tuple, list))
-            assert 'message_template' in BaseNotificationOperator.template_fields
+            assert hasattr(BaseNotificationOperator, "template_fields")
+            assert isinstance(BaseNotificationOperator.template_fields, tuple | list)
+            assert "message_template" in BaseNotificationOperator.template_fields
         except ImportError:
             pytest.skip("BaseNotificationOperator not implemented yet")
 
@@ -270,9 +275,9 @@ class TestBaseNotificationOperator:
         try:
             from src.operators.notifications.base_notification import BaseNotificationOperator
 
-            assert hasattr(BaseNotificationOperator, 'ui_color')
+            assert hasattr(BaseNotificationOperator, "ui_color")
             assert isinstance(BaseNotificationOperator.ui_color, str)
-            assert BaseNotificationOperator.ui_color.startswith('#')
+            assert BaseNotificationOperator.ui_color.startswith("#")
         except ImportError:
             pytest.skip("BaseNotificationOperator not implemented yet")
 
@@ -286,7 +291,7 @@ class TestBaseNotificationOperator:
                 message_template="Success: {{ dag.dag_id }}",
             )
 
-            with patch.object(operator, 'send_notification', return_value=True) as mock_send:
+            with patch.object(operator, "send_notification", return_value=True) as mock_send:
                 result = operator.execute(mock_context)
 
                 mock_send.assert_called_once()

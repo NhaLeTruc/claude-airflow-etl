@@ -6,6 +6,7 @@ Counts word frequencies from input text.
 """
 
 import sys
+
 from pyspark.sql import SparkSession
 
 
@@ -13,8 +14,6 @@ def main():
     """Run word count Spark job."""
     # Parse arguments
     if len(sys.argv) < 3:
-        print("Usage: word_count.py <input_path> <output_path>")
-        print("Using default values for demo")
         input_path = None
         output_path = "/tmp/wordcount_output"
     else:
@@ -23,10 +22,6 @@ def main():
 
     # Create Spark session
     spark = SparkSession.builder.appName("WordCount").getOrCreate()
-
-    print(f"Spark version: {spark.version}")
-    print(f"Input path: {input_path}")
-    print(f"Output path: {output_path}")
 
     try:
         if input_path:
@@ -43,7 +38,7 @@ def main():
             text_df = spark.createDataFrame(sample_data, ["value"])
 
         # Split lines into words
-        from pyspark.sql.functions import explode, split, lower, trim
+        from pyspark.sql.functions import explode, lower, split, trim
 
         words_df = text_df.select(explode(split(lower(trim(text_df.value)), "\\s+")).alias("word"))
 
@@ -54,25 +49,19 @@ def main():
         word_counts = words_df.groupBy("word").count().orderBy("count", ascending=False)
 
         # Show results
-        print("\n=== Word Count Results ===")
         word_counts.show(20, truncate=False)
 
         # Write results
         word_counts.write.mode("overwrite").csv(output_path)
-        print(f"\nResults written to: {output_path}")
 
         # Print summary
-        total_words = words_df.count()
-        unique_words = word_counts.count()
-        print(f"\nTotal words: {total_words}")
-        print(f"Unique words: {unique_words}")
+        words_df.count()
+        word_counts.count()
 
-    except Exception as e:
-        print(f"Error during word count: {str(e)}")
+    except Exception:
         raise
     finally:
         spark.stop()
-        print("\nSpark session stopped")
 
 
 if __name__ == "__main__":

@@ -5,14 +5,15 @@ Tests YARN-specific configuration, queue selection, and resource allocation.
 Following TDD approach - these tests should FAIL until implementation is complete.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
 
 # These imports will fail until implementation exists
 try:
-    from src.operators.spark.yarn_operator import SparkYarnOperator
     from src.hooks.spark_hook import SparkJobStatus
+    from src.operators.spark.yarn_operator import SparkYarnOperator
 except ImportError:
     SparkYarnOperator = None
     SparkJobStatus = None
@@ -159,9 +160,7 @@ class TestSparkYarnOperator:
         mock_hook.wait_for_completion.return_value = True
         mock_hook_class.return_value = mock_hook
 
-        op = SparkYarnOperator(
-            task_id="yarn_job", application="/path/to/app.py", queue="default"
-        )
+        op = SparkYarnOperator(task_id="yarn_job", application="/path/to/app.py", queue="default")
 
         op.execute(mock_context)
 
@@ -229,9 +228,7 @@ class TestSparkYarnOperator:
         mock_hook.wait_for_completion.return_value = True
         mock_hook_class.return_value = mock_hook
 
-        op = SparkYarnOperator(
-            task_id="yarn_job", application="/path/to/app.py", queue="default"
-        )
+        op = SparkYarnOperator(task_id="yarn_job", application="/path/to/app.py", queue="default")
 
         result = op.execute(mock_context)
 
@@ -251,9 +248,7 @@ class TestSparkYarnOperator:
         if SparkYarnOperator is None:
             pytest.skip("SparkYarnOperator not yet implemented")
 
-        op = SparkYarnOperator(
-            task_id="yarn_job", application="/path/to/app.py", queue="default"
-        )
+        op = SparkYarnOperator(task_id="yarn_job", application="/path/to/app.py", queue="default")
 
         assert hasattr(op, "ui_color")
         # YARN operators typically use orange/brown colors
@@ -305,9 +300,7 @@ class TestSparkYarnOperator:
         mock_hook.get_job_logs.return_value = "Application logs content"
         mock_hook_class.return_value = mock_hook
 
-        op = SparkYarnOperator(
-            task_id="yarn_job", application="/path/to/app.py", queue="default"
-        )
+        op = SparkYarnOperator(task_id="yarn_job", application="/path/to/app.py", queue="default")
 
         op.execute(mock_context)
 

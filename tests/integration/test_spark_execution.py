@@ -5,18 +5,17 @@ Tests job submission to mocked clusters, status tracking, and completion.
 Following TDD approach - these tests should FAIL until implementation is complete.
 """
 
-import pytest
-import time
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
-from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
 
 # These imports will fail until implementation exists
 try:
     from src.hooks.spark_hook import SparkHook, SparkJobStatus
+    from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
     from src.operators.spark.standalone_operator import SparkStandaloneOperator
     from src.operators.spark.yarn_operator import SparkYarnOperator
-    from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
 except ImportError:
     SparkHook = None
     SparkJobStatus = None
@@ -257,7 +256,7 @@ class TestSparkYarnIntegration:
                 queue="default",
             )
 
-            result = op.execute(mock_context)
+            op.execute(mock_context)
 
             # Verify YARN-specific configuration
             call_kwargs = mock_hook.submit_job.call_args[1]
@@ -326,7 +325,7 @@ class TestSparkKubernetesIntegration:
                 namespace="spark-jobs",
             )
 
-            result = op.execute(mock_context)
+            op.execute(mock_context)
 
             # Verify K8s-specific configuration
             call_kwargs = mock_hook.submit_job.call_args[1]

@@ -18,7 +18,7 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def discover_and_generate_dags() -> Dict[str, DAG]:
+def discover_and_generate_dags() -> dict[str, DAG]:
     """
     Discover JSON configurations and generate DAGs.
 
@@ -50,11 +50,15 @@ def discover_and_generate_dags() -> Dict[str, DAG]:
         logger.info("No JSON configuration files found", config_dir=str(config_dir))
         return {}
 
-    logger.info("Found configuration files", count=len(config_files), files=[Path(f).name for f in config_files])
+    logger.info(
+        "Found configuration files",
+        count=len(config_files),
+        files=[Path(f).name for f in config_files],
+    )
 
     # Generate DAGs from configs
     builder = DAGBuilder()
-    generated_dags: Dict[str, DAG] = {}
+    generated_dags: dict[str, DAG] = {}
 
     for config_file in config_files:
         config_path = Path(config_file)

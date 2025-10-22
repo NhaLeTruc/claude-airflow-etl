@@ -199,6 +199,10 @@ docker exec airflow-scheduler pytest tests/unit/test_operators/test_spark_operat
 ### Local Setup
 
 ```bash
+python3 -m venv venv
+
+source venv/bin/activate
+
 # Install dependencies
 pip install -r requirements-dev.txt
 

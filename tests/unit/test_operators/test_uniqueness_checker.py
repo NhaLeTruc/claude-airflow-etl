@@ -5,10 +5,10 @@ Tests cover duplicate detection, composite key support, uniqueness validation,
 and duplicate row identification.
 """
 
-import pytest
-from unittest.mock import Mock, patch
 from datetime import datetime
-from airflow.exceptions import AirflowException
+from unittest.mock import Mock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ class TestUniquenessChecker:
                 key_columns=["id"],
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_count:
+            with patch.object(operator, "get_duplicate_count") as mock_count:
                 mock_count.return_value = 0
 
                 result = operator.execute(mock_context)
@@ -75,7 +75,7 @@ class TestUniquenessChecker:
                 key_columns=["customer_id"],
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_count:
+            with patch.object(operator, "get_duplicate_count") as mock_count:
                 mock_count.return_value = 5
 
                 result = operator.execute(mock_context)
@@ -95,7 +95,7 @@ class TestUniquenessChecker:
                 key_columns=["customer_id", "product_id", "sale_date_id"],
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_count:
+            with patch.object(operator, "get_duplicate_count") as mock_count:
                 mock_count.return_value = 0
 
                 result = operator.execute(mock_context)
@@ -120,7 +120,7 @@ class TestUniquenessChecker:
                 {"email": "duplicate@example.com", "count": 2},
             ]
 
-            with patch.object(operator, 'get_duplicate_rows') as mock_rows:
+            with patch.object(operator, "get_duplicate_rows") as mock_rows:
                 mock_rows.return_value = duplicate_rows
 
                 result = operator.execute(mock_context)
@@ -140,8 +140,8 @@ class TestUniquenessChecker:
                 key_columns=["id"],
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_dup:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_duplicate_count") as mock_dup:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_dup.return_value = 10
                     mock_total.return_value = 1000
 
@@ -163,8 +163,8 @@ class TestUniquenessChecker:
                 max_duplicate_percentage=5.0,  # Allow up to 5% duplicates
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_dup:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_duplicate_count") as mock_dup:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_dup.return_value = 3
                     mock_total.return_value = 100  # 3% duplicates
 
@@ -186,7 +186,7 @@ class TestUniquenessChecker:
                 where_clause="sale_date = '{{ ds }}'",
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_count:
+            with patch.object(operator, "get_duplicate_count") as mock_count:
                 mock_count.return_value = 0
 
                 result = operator.execute(mock_context)
@@ -206,7 +206,7 @@ class TestUniquenessChecker:
                 exclude_nulls=True,
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_count:
+            with patch.object(operator, "get_duplicate_count") as mock_count:
                 mock_count.return_value = 0
 
                 result = operator.execute(mock_context)
@@ -227,7 +227,7 @@ class TestUniquenessChecker:
                 case_sensitive=True,
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_count:
+            with patch.object(operator, "get_duplicate_count") as mock_count:
                 # "User" and "user" should be treated as different
                 mock_count.return_value = 0
 
@@ -248,7 +248,7 @@ class TestUniquenessChecker:
                 trim_whitespace=True,
             )
 
-            with patch.object(operator, 'get_duplicate_count') as mock_count:
+            with patch.object(operator, "get_duplicate_count") as mock_count:
                 # "ABC" and " ABC " should be treated as duplicates
                 mock_count.return_value = 1
 

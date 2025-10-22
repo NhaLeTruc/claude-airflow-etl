@@ -30,14 +30,15 @@ Note: This DAG coordinates with demo_simple_extract_load_v1 (upstream)
 and can trigger quality checks (downstream).
 """
 
+import logging
 from datetime import datetime, timedelta
+
 from airflow import DAG
-from airflow.operators.python import PythonOperator, BranchPythonOperator
+from airflow.operators.dummy import DummyOperator
+from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sensors.external_task import ExternalTaskSensor
-from airflow.operators.dummy import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ def check_upstream_data_quality(**context):
     # Simulate quality check logic
     # In real implementation, this would query quality metrics from upstream DAG
     import random
+
     random.seed(execution_date.day)  # Deterministic for demo
 
     record_count = random.randint(500, 1500)
@@ -87,16 +89,13 @@ def check_upstream_data_quality(**context):
         "quality_gate": "PASS" if quality_passed else "FAIL",
     }
 
-    logger.info(f"Quality Check Results:")
+    logger.info("Quality Check Results:")
     logger.info(f"  Record Count: {record_count}")
     logger.info(f"  Error Rate: {error_rate:.2%}")
     logger.info(f"  Quality Gate: {result['quality_gate']}")
 
     # Push results to XCom for downstream tasks
-    context["task_instance"].xcom_push(
-        key="quality_check_result",
-        value=result
-    )
+    context["task_instance"].xcom_push(key="quality_check_result", value=result)
 
     return result
 
@@ -115,8 +114,7 @@ def decide_next_action(**context):
 
     # Pull quality check results
     quality_result = task_instance.xcom_pull(
-        task_ids="check_data_quality",
-        key="quality_check_result"
+        task_ids="check_data_quality", key="quality_check_result"
     )
 
     if not quality_result:
@@ -149,8 +147,7 @@ def process_validated_data(**context):
     task_instance = context["task_instance"]
 
     quality_result = task_instance.xcom_pull(
-        task_ids="check_data_quality",
-        key="quality_check_result"
+        task_ids="check_data_quality", key="quality_check_result"
     )
 
     logger.info("Processing validated data from upstream DAG")
@@ -178,8 +175,7 @@ def log_completion(**context):
     task_instance = context["task_instance"]
 
     quality_result = task_instance.xcom_pull(
-        task_ids="check_data_quality",
-        key="quality_check_result"
+        task_ids="check_data_quality", key="quality_check_result"
     )
 
     logger.info("=" * 80)
@@ -212,7 +208,6 @@ with DAG(
     tags=["intermediate", "cross-dag", "sensor", "trigger", "demo"],
     doc_md=__doc__,
 ) as dag:
-
     # Start task
     start = DummyOperator(
         task_id="start",

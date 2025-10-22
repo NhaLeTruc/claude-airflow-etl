@@ -5,7 +5,7 @@ Provides reusable Jinja2 templates for common notification scenarios
 including success, failure, and data quality alerts.
 """
 
-from typing import Dict, Any
+from typing import Any
 
 
 class NotificationTemplates:
@@ -231,7 +231,7 @@ View Spark UI: {{ logs_url }}
 
     # Custom template builder helpers
     @staticmethod
-    def build_teams_facts(context: Dict[str, Any]) -> list:
+    def build_teams_facts(context: dict[str, Any]) -> list:
         """
         Build facts array for Teams MessageCard.
 
@@ -308,8 +308,6 @@ def get_template(category: str, subcategory: str = None) -> str:
         template = NOTIFICATION_TEMPLATES.get(category)
 
     if template is None:
-        raise ValueError(
-            f"Template not found: category='{category}', subcategory='{subcategory}'"
-        )
+        raise ValueError(f"Template not found: category='{category}', subcategory='{subcategory}'")
 
     return template

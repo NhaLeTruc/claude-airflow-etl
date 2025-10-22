@@ -6,7 +6,7 @@ Provides consistent logging format with contextual information for debugging.
 
 import logging
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class StructuredLogger:
@@ -40,7 +40,7 @@ class StructuredLogger:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
-        self.context: Dict[str, Any] = {}
+        self.context: dict[str, Any] = {}
 
     def add_context(self, **kwargs: Any) -> None:
         """
@@ -55,7 +55,7 @@ class StructuredLogger:
         """Clear all context fields."""
         self.context.clear()
 
-    def _format_message(self, msg: str, extra_context: Optional[Dict[str, Any]] = None) -> str:
+    def _format_message(self, msg: str, extra_context: dict[str, Any] | None = None) -> str:
         """
         Format log message with context fields.
 
