@@ -11,7 +11,6 @@ from typing import Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
-from airflow.utils.decorators import apply_defaults
 from jinja2 import Template, TemplateError
 
 from src.utils.logger import get_logger
@@ -41,7 +40,7 @@ class BaseNotificationOperator(BaseOperator):
     template_fields = ("message_template",)
     ui_color = "#d4a5d4"  # Light purple for notifications
 
-    @apply_defaults
+
     def __init__(
         self,
         *,

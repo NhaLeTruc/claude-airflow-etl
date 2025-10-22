@@ -7,7 +7,6 @@ Validates uniqueness of key columns and detects duplicate records.
 from typing import Any
 
 from airflow.exceptions import AirflowException
-from airflow.utils.decorators import apply_defaults
 
 from src.hooks.warehouse_hook import WarehouseHook
 from src.operators.quality.base_quality_operator import BaseQualityOperator
@@ -35,7 +34,7 @@ class UniquenessChecker(BaseQualityOperator):
 
     template_fields = BaseQualityOperator.template_fields + ("where_clause",)
 
-    @apply_defaults
+
     def __init__(
         self,
         *,

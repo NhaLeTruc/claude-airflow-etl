@@ -12,7 +12,6 @@ from email.mime.text import MIMEText
 from typing import Any
 
 from airflow.exceptions import AirflowException
-from airflow.utils.decorators import apply_defaults
 
 from src.operators.notifications.base_notification import BaseNotificationOperator
 from src.utils.logger import get_logger
@@ -45,7 +44,7 @@ class EmailNotificationOperator(BaseNotificationOperator):
     template_fields = ("to", "subject", "message_template", "cc", "bcc")
     ui_color = "#4caf50"  # Green for email
 
-    @apply_defaults
+
     def __init__(
         self,
         *,

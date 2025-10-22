@@ -8,7 +8,6 @@ from typing import Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
 from src.hooks.spark_hook import SparkHook
 from src.utils.logger import get_logger
@@ -39,7 +38,7 @@ class SparkStandaloneOperator(BaseOperator):
     template_ext = (".py", ".jar")
     ui_color = "#e47128"  # Orange for Spark Standalone
 
-    @apply_defaults
+
     def __init__(
         self,
         *,
