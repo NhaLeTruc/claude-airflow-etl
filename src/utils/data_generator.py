@@ -6,7 +6,7 @@ All data generation uses deterministic seeding for reproducibility in tests.
 
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from faker import Faker
 
@@ -26,7 +26,7 @@ class MockDataGenerator:
 
     def generate_customers(
         self, count: int = 100, null_email_rate: float = 0.02
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate customer dimension records.
 
         Args:
@@ -56,7 +56,7 @@ class MockDataGenerator:
 
         return customers
 
-    def generate_products(self, count: int = 50) -> List[Dict[str, Any]]:
+    def generate_products(self, count: int = 50) -> list[dict[str, Any]]:
         """Generate product dimension records.
 
         Args:
@@ -70,7 +70,7 @@ class MockDataGenerator:
         categories = ["Electronics", "Clothing", "Food", "Books", "Home"]
         subcategories = ["Accessories", "Main Items", "Supplies", "Parts", "Bundles"]
 
-        for i in range(1, count + 1):
+        for _i in range(1, count + 1):
             product = {
                 "product_key": f"PROD-{self.fake.bothify(text='???###')}",
                 "product_name": f"{self.fake.word().title()} {self.fake.word().title()}",
@@ -84,7 +84,7 @@ class MockDataGenerator:
 
     def generate_date_dimension(
         self, start_date: datetime, end_date: datetime
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate date dimension records for a date range.
 
         Args:
@@ -130,14 +130,14 @@ class MockDataGenerator:
     def generate_sales(
         self,
         count: int = 1000,
-        customer_ids: List[int] = None,
-        product_ids: List[int] = None,
+        customer_ids: list[int] = None,
+        product_ids: list[int] = None,
         date_range: tuple = None,
         null_customer_rate: float = 0.02,
         negative_quantity_rate: float = 0.01,
         calculation_error_rate: float = 0.005,
         duplicate_rate: float = 0.03,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate sales fact records with intentional quality issues.
 
         Args:
@@ -220,10 +220,10 @@ class MockDataGenerator:
     def generate_staging_sales(
         self,
         count: int = 100,
-        customer_ids: List[int] = None,
-        product_ids: List[int] = None,
+        customer_ids: list[int] = None,
+        product_ids: list[int] = None,
         source_system: str = "POS_SYSTEM",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate staging sales records (unprocessed raw data).
 
         Args:
@@ -272,7 +272,7 @@ class MockDataGenerator:
 
         return staging_records
 
-    def reset_seed(self, seed: Optional[int] = None) -> None:
+    def reset_seed(self, seed: int | None = None) -> None:
         """Reset the random seed for deterministic generation.
 
         Args:
@@ -290,7 +290,7 @@ def generate_mock_warehouse_data(
     sales_count: int = 100000,
     date_range: tuple = None,
     seed: int = 42,
-) -> Dict[str, List[Dict[str, Any]]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Generate complete mock warehouse dataset.
 
     Args:

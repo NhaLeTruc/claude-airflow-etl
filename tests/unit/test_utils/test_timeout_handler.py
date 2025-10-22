@@ -5,7 +5,6 @@ Tests task termination on timeout and correct status marking.
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
 
 import pytest
 
@@ -133,8 +132,8 @@ class TestTimeoutHandler:
 
     def test_timeout_context_marks_timeout(self):
         """Test that context manager marks timeout when exceeded."""
+
         from src.utils.timeout_handler import TimeoutContext
-        import time
 
         with TimeoutContext(timeout_seconds=1) as ctx:
             # Mock sleep to simulate long execution
@@ -210,7 +209,9 @@ class TestTimeoutHandler:
         with pytest.raises(ValueError) as exc_info:
             TimeoutChecker(timeout_seconds=-100)
 
-        assert "negative" in str(exc_info.value).lower() or "positive" in str(exc_info.value).lower()
+        assert (
+            "negative" in str(exc_info.value).lower() or "positive" in str(exc_info.value).lower()
+        )
 
     def test_timeout_warning_threshold(self):
         """Test warning when approaching timeout."""
@@ -221,11 +222,17 @@ class TestTimeoutHandler:
 
         # At 8 minutes (80% of timeout) - should warn
         current_time = datetime(2024, 1, 1, 12, 8, 0)
-        assert should_warn_about_timeout(start_time, current_time, timeout_seconds, threshold=0.8) is True
+        assert (
+            should_warn_about_timeout(start_time, current_time, timeout_seconds, threshold=0.8)
+            is True
+        )
 
         # At 5 minutes (50% of timeout) - should not warn
         current_time = datetime(2024, 1, 1, 12, 5, 0)
-        assert should_warn_about_timeout(start_time, current_time, timeout_seconds, threshold=0.8) is False
+        assert (
+            should_warn_about_timeout(start_time, current_time, timeout_seconds, threshold=0.8)
+            is False
+        )
 
     def test_get_timeout_status_string(self):
         """Test getting human-readable timeout status."""

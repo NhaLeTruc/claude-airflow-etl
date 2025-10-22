@@ -26,13 +26,12 @@ Constitutional Compliance:
 - Principle V: Observability (structured logging, execution tracking)
 """
 
+import logging
 from datetime import datetime, timedelta
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.postgres_operator import PostgresOperator
 from airflow.utils.task_group import TaskGroup
-from airflow.models import Variable
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +77,7 @@ def extract_category_data(category: str, **context):
     logger.info(f"Extracted {record_count} records for {category}")
 
     # Push to XCom for downstream tasks
-    context["task_instance"].xcom_push(
-        key=f"extract_{category}",
-        value=result
-    )
+    context["task_instance"].xcom_push(key=f"extract_{category}", value=result)
 
     return result
 
@@ -101,8 +97,7 @@ def transform_category_data(category: str, **context):
 
     # Pull extraction results from XCom
     extract_result = task_instance.xcom_pull(
-        task_ids=f"extract_group.extract_{category}",
-        key=f"extract_{category}"
+        task_ids=f"extract_group.extract_{category}", key=f"extract_{category}"
     )
 
     if not extract_result:
@@ -129,10 +124,7 @@ def transform_category_data(category: str, **context):
     )
 
     # Push to XCom for aggregation
-    task_instance.xcom_push(
-        key=f"transform_{category}",
-        value=result
-    )
+    task_instance.xcom_push(key=f"transform_{category}", value=result)
 
     return result
 
@@ -152,8 +144,7 @@ def load_category_data(category: str, **context):
 
     # Pull transformation results from XCom
     transform_result = task_instance.xcom_pull(
-        task_ids=f"transform_group.transform_{category}",
-        key=f"transform_{category}"
+        task_ids=f"transform_group.transform_{category}", key=f"transform_{category}"
     )
 
     if not transform_result or transform_result.get("status") == "skipped":
@@ -176,10 +167,7 @@ def load_category_data(category: str, **context):
     logger.info(f"Successfully loaded {records_to_load} records for {category}")
 
     # Push to XCom for aggregation
-    task_instance.xcom_push(
-        key=f"load_{category}",
-        value=result
-    )
+    task_instance.xcom_push(key=f"load_{category}", value=result)
 
     return result
 
@@ -210,20 +198,17 @@ def aggregate_results(**context):
     # Pull results from all parallel load tasks
     for category in categories:
         load_result = task_instance.xcom_pull(
-            task_ids=f"load_group.load_{category}",
-            key=f"load_{category}"
+            task_ids=f"load_group.load_{category}", key=f"load_{category}"
         )
 
         if load_result and load_result.get("status") == "success":
             # Also get transform stats for invalid count
             transform_result = task_instance.xcom_pull(
-                task_ids=f"transform_group.transform_{category}",
-                key=f"transform_{category}"
+                task_ids=f"transform_group.transform_{category}", key=f"transform_{category}"
             )
 
             extract_result = task_instance.xcom_pull(
-                task_ids=f"extract_group.extract_{category}",
-                key=f"extract_{category}"
+                task_ids=f"extract_group.extract_{category}", key=f"extract_{category}"
             )
 
             if extract_result:
@@ -235,11 +220,15 @@ def aggregate_results(**context):
 
             total_loaded += load_result.get("records_loaded", 0)
 
-            category_stats.append({
-                "category": category,
-                "extracted": extract_result.get("records_extracted", 0) if extract_result else 0,
-                "loaded": load_result.get("records_loaded", 0),
-            })
+            category_stats.append(
+                {
+                    "category": category,
+                    "extracted": (
+                        extract_result.get("records_extracted", 0) if extract_result else 0
+                    ),
+                    "loaded": load_result.get("records_loaded", 0),
+                }
+            )
 
     aggregated_result = {
         "total_categories_processed": len(category_stats),
@@ -248,8 +237,7 @@ def aggregate_results(**context):
         "total_records_loaded": total_loaded,
         "total_invalid_records": total_invalid,
         "data_quality_rate": (
-            (total_transformed / total_extracted * 100)
-            if total_extracted > 0 else 0
+            (total_transformed / total_extracted * 100) if total_extracted > 0 else 0
         ),
         "category_breakdown": category_stats,
         "aggregation_timestamp": datetime.now().isoformat(),
@@ -311,7 +299,6 @@ with DAG(
     tags=["intermediate", "parallel", "pattern", "demo"],
     doc_md=__doc__,
 ) as dag:
-
     # Start task
     start = PythonOperator(
         task_id="start",

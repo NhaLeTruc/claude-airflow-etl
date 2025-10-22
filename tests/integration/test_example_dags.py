@@ -8,9 +8,10 @@ Tests ensure each example DAG:
 - Leaves the system in a clean state
 """
 
+from datetime import datetime
+
 import pytest
-from datetime import datetime, timedelta
-from airflow.models import DagBag, DagRun, TaskInstance
+from airflow.models import DagBag, TaskInstance
 from airflow.utils.state import DagRunState, TaskInstanceState
 from airflow.utils.types import DagRunType
 
@@ -76,7 +77,7 @@ class TestBeginnerExampleDAGs:
             assert task.retry_delay is not None
 
         # Execute DAG
-        dag_run = dag.create_dagrun(
+        dag.create_dagrun(
             state=DagRunState.RUNNING,
             execution_date=execution_date,
             run_type=DagRunType.SCHEDULED,
@@ -99,13 +100,14 @@ class TestBeginnerExampleDAGs:
 
         # Verify quality operators present
         quality_operators = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "quality" in task.task_id.lower() or "check" in task.task_id.lower()
         ]
         assert len(quality_operators) > 0
 
         # Execute DAG
-        dag_run = dag.create_dagrun(
+        dag.create_dagrun(
             state=DagRunState.RUNNING,
             execution_date=execution_date,
             run_type=DagRunType.MANUAL,
@@ -127,7 +129,8 @@ class TestBeginnerExampleDAGs:
 
         # Verify notification operators present
         notification_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "notification" in task.task_id.lower() or "notify" in task.task_id.lower()
         ]
         assert len(notification_tasks) > 0
@@ -146,7 +149,7 @@ class TestIntermediateExampleDAGs:
         dag = dag_bag.get_dag(dag_id)
 
         # Execute DAG
-        dag_run = dag.create_dagrun(
+        dag.create_dagrun(
             state=DagRunState.RUNNING,
             execution_date=execution_date,
             run_type=DagRunType.SCHEDULED,
@@ -168,8 +171,12 @@ class TestIntermediateExampleDAGs:
 
         # Verify SCD-related tasks present
         scd_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in ["scd", "history", "effective", "current"])
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["scd", "history", "effective", "current"]
+            )
         ]
         assert len(scd_tasks) > 0
 
@@ -198,7 +205,8 @@ class TestIntermediateExampleDAGs:
 
         # Verify Spark operators present
         spark_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "spark" in task.task_id.lower() or "Spark" in task.__class__.__name__
         ]
         assert len(spark_tasks) > 0
@@ -214,11 +222,13 @@ class TestIntermediateExampleDAGs:
 
         # Verify sensor or trigger operators present
         sensor_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "sensor" in task.task_id.lower() or "Sensor" in task.__class__.__name__
         ]
         trigger_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "trigger" in task.task_id.lower() or "Trigger" in task.__class__.__name__
         ]
         assert len(sensor_tasks) > 0 or len(trigger_tasks) > 0
@@ -238,7 +248,8 @@ class TestAdvancedExampleDAGs:
 
         # Verify multiple Spark operators for different cluster types
         spark_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "spark" in task.task_id.lower() or "Spark" in task.__class__.__name__
         ]
         # Should have at least 3 Spark tasks (standalone, YARN, K8s)
@@ -255,9 +266,12 @@ class TestAdvancedExampleDAGs:
 
         # Verify all 5 quality check types present
         quality_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["schema", "completeness", "freshness", "uniqueness", "null"])
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["schema", "completeness", "freshness", "uniqueness", "null"]
+            )
         ]
         # Should have all 5 quality check types
         assert len(quality_tasks) >= 5
@@ -273,7 +287,8 @@ class TestAdvancedExampleDAGs:
 
         # Verify file sensor present
         sensor_tasks = [
-            task for task in dag.tasks
+            task
+            for task in dag.tasks
             if "file" in task.task_id.lower() and "sensor" in task.task_id.lower()
         ]
         assert len(sensor_tasks) > 0
@@ -289,9 +304,12 @@ class TestAdvancedExampleDAGs:
 
         # Verify compensation or cleanup tasks present
         recovery_tasks = [
-            task for task in dag.tasks
-            if any(keyword in task.task_id.lower() for keyword in
-                   ["cleanup", "rollback", "compensation", "recovery"])
+            task
+            for task in dag.tasks
+            if any(
+                keyword in task.task_id.lower()
+                for keyword in ["cleanup", "rollback", "compensation", "recovery"]
+            )
         ]
         assert len(recovery_tasks) > 0
 
@@ -337,7 +355,7 @@ class TestAllExampleDAGs:
         for dag_id, dag in dag_bag.dags.items():
             start_time = datetime.now()
 
-            dag_run = dag.create_dagrun(
+            dag.create_dagrun(
                 state=DagRunState.RUNNING,
                 execution_date=execution_date,
                 run_type=DagRunType.MANUAL,
@@ -358,4 +376,6 @@ class TestAllExampleDAGs:
         actual_count = len([dag_id for dag_id in dag_bag.dag_ids if dag_id.startswith("demo_")])
 
         # Allow partial implementation
-        assert actual_count <= expected_count, f"More DAGs than expected: {actual_count} > {expected_count}"
+        assert (
+            actual_count <= expected_count
+        ), f"More DAGs than expected: {actual_count} > {expected_count}"

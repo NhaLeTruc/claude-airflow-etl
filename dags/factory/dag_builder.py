@@ -8,7 +8,7 @@ and sets up dependencies.
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from airflow import DAG
 from airflow.models import BaseOperator
@@ -46,7 +46,7 @@ class DAGBuilder:
         self.operator_registry = get_default_registry()
         logger.debug("DAGBuilder initialized")
 
-    def build_dag(self, config: Dict[str, Any]) -> DAG:
+    def build_dag(self, config: dict[str, Any]) -> DAG:
         """
         Build DAG from configuration dict.
 
@@ -66,7 +66,9 @@ class DAGBuilder:
         # Step 1: Validate configuration
         validation_result: ValidationResult = self.validator.validate(config)
         if not validation_result.is_valid:
-            error_msg = f"DAG '{dag_id}' configuration invalid: {', '.join(validation_result.errors)}"
+            error_msg = (
+                f"DAG '{dag_id}' configuration invalid: {', '.join(validation_result.errors)}"
+            )
             logger.error(error_msg)
             raise DAGBuildError(error_msg)
 
@@ -88,7 +90,7 @@ class DAGBuilder:
             raise DAGBuildError(error_msg) from e
 
         # Step 4: Create tasks
-        tasks: Dict[str, BaseOperator] = {}
+        tasks: dict[str, BaseOperator] = {}
         task_configs = config.get("tasks", [])
 
         for task_config in task_configs:
@@ -113,7 +115,7 @@ class DAGBuilder:
         logger.info("DAG built successfully", dag_id=dag_id, task_count=len(tasks))
         return dag
 
-    def _build_dag_kwargs(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _build_dag_kwargs(self, config: dict[str, Any]) -> dict[str, Any]:
         """
         Build DAG constructor kwargs from configuration.
 
@@ -148,7 +150,7 @@ class DAGBuilder:
 
         return dag_kwargs
 
-    def _process_default_args(self, default_args: Dict[str, Any]) -> Dict[str, Any]:
+    def _process_default_args(self, default_args: dict[str, Any]) -> dict[str, Any]:
         """
         Process default_args, converting special types.
 
@@ -169,9 +171,9 @@ class DAGBuilder:
 
     def _create_task(
         self,
-        task_config: Dict[str, Any],
+        task_config: dict[str, Any],
         dag: DAG,
-        default_args: Dict[str, Any],
+        default_args: dict[str, Any],
     ) -> BaseOperator:
         """
         Create task from configuration.
@@ -215,8 +217,8 @@ class DAGBuilder:
 
     def _set_dependencies(
         self,
-        task_configs: List[Dict[str, Any]],
-        tasks: Dict[str, BaseOperator],
+        task_configs: list[dict[str, Any]],
+        tasks: dict[str, BaseOperator],
         dag_id: str,
     ) -> None:
         """
@@ -284,7 +286,7 @@ class DAGBuilder:
 
 
 # Convenience function
-def build_dag_from_config(config: Dict[str, Any]) -> DAG:
+def build_dag_from_config(config: dict[str, Any]) -> DAG:
     """
     Build DAG from configuration dict.
 

@@ -5,10 +5,10 @@ Tests cover NULL percentage calculation, threshold validation,
 multi-column checking, and NOT NULL constraint verification.
 """
 
-import pytest
-from unittest.mock import Mock, patch
 from datetime import datetime
-from airflow.exceptions import AirflowException
+from unittest.mock import Mock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -58,8 +58,8 @@ class TestNullRateChecker:
                 max_null_percentage=10.0,
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 5
                     mock_total.return_value = 1000  # 0.5% null rate
 
@@ -81,8 +81,8 @@ class TestNullRateChecker:
                 max_null_percentage=10.0,
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 200
                     mock_total.return_value = 1000  # 20% null rate
 
@@ -104,8 +104,8 @@ class TestNullRateChecker:
                 max_null_percentage=25.0,
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 250
                     mock_total.return_value = 1000  # Exactly 25%
 
@@ -128,8 +128,8 @@ class TestNullRateChecker:
                 max_null_percentage=0.0,  # Require no NULLs
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 0
                     mock_total.return_value = 1000
 
@@ -151,8 +151,8 @@ class TestNullRateChecker:
                 max_null_percentage=50.0,
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 100
                     mock_total.return_value = 100  # 100% null
 
@@ -174,7 +174,7 @@ class TestNullRateChecker:
                 max_null_percentage=10.0,
             )
 
-            with patch.object(operator, 'get_null_rates') as mock_rates:
+            with patch.object(operator, "get_null_rates") as mock_rates:
                 mock_rates.return_value = {
                     "email": 5.0,
                     "phone": 8.0,
@@ -200,8 +200,8 @@ class TestNullRateChecker:
                 max_null_percentage=5.0,
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 2
                     mock_total.return_value = 100
 
@@ -222,8 +222,8 @@ class TestNullRateChecker:
                 max_null_percentage=10.0,
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 0
                     mock_total.return_value = 0  # Empty table
 
@@ -246,7 +246,7 @@ class TestNullRateChecker:
                 expect_not_null=True,  # Column should have NOT NULL constraint
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
+            with patch.object(operator, "get_null_count") as mock_null:
                 mock_null.return_value = 0
 
                 result = operator.execute(mock_context)
@@ -266,8 +266,8 @@ class TestNullRateChecker:
                 max_null_percentage=10.0,
             )
 
-            with patch.object(operator, 'get_null_count') as mock_null:
-                with patch.object(operator, 'get_total_count') as mock_total:
+            with patch.object(operator, "get_null_count") as mock_null:
+                with patch.object(operator, "get_total_count") as mock_total:
                     mock_null.return_value = 50
                     mock_total.return_value = 1000
 

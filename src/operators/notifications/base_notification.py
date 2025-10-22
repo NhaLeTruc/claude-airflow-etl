@@ -5,12 +5,12 @@ Provides common functionality for all notification operators including
 retry logic, template rendering, error handling, and logging.
 """
 
-from typing import Any, Dict, Optional
-from datetime import timedelta
 from abc import abstractmethod
+from datetime import timedelta
+from typing import Any
 
-from airflow.models import BaseOperator
 from airflow.exceptions import AirflowException
+from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from jinja2 import Template, TemplateError
 
@@ -49,7 +49,7 @@ class BaseNotificationOperator(BaseOperator):
         retries: int = 2,
         retry_delay: timedelta = timedelta(seconds=30),
         retry_exponential_backoff: bool = False,
-        execution_timeout: Optional[timedelta] = None,
+        execution_timeout: timedelta | None = None,
         **kwargs,
     ):
         """Initialize BaseNotificationOperator."""
@@ -67,7 +67,7 @@ class BaseNotificationOperator(BaseOperator):
 
         self.message_template = message_template
 
-    def render_template(self, template_str: str, context: Dict[str, Any]) -> str:
+    def render_template(self, template_str: str, context: dict[str, Any]) -> str:
         """
         Render a Jinja2 template with Airflow context.
 
@@ -87,14 +87,11 @@ class BaseNotificationOperator(BaseOperator):
             )
             raise AirflowException(f"Template rendering error: {str(e)}") from e
         except Exception as e:
-            logger.error(
-                f"Unexpected error during template rendering: {str(e)}",
-                exc_info=True
-            )
+            logger.error(f"Unexpected error during template rendering: {str(e)}", exc_info=True)
             raise AirflowException(f"Template rendering failed: {str(e)}") from e
 
     @abstractmethod
-    def send_notification(self, message: str, context: Dict[str, Any]) -> bool:
+    def send_notification(self, message: str, context: dict[str, Any]) -> bool:
         """
         Send the notification message.
 
@@ -107,7 +104,7 @@ class BaseNotificationOperator(BaseOperator):
         """
         raise NotImplementedError("Subclasses must implement send_notification()")
 
-    def execute(self, context: Dict[str, Any]) -> Optional[bool]:
+    def execute(self, context: dict[str, Any]) -> bool | None:
         """
         Execute the notification operator.
 
@@ -117,8 +114,16 @@ class BaseNotificationOperator(BaseOperator):
         :return: True if successful, None otherwise
         :raises AirflowException: If notification fails after retries
         """
-        dag_id = context.get("dag", {}).dag_id if hasattr(context.get("dag", {}), "dag_id") else "unknown"
-        task_id = context.get("task", {}).task_id if hasattr(context.get("task", {}), "task_id") else "unknown"
+        dag_id = (
+            context.get("dag", {}).dag_id
+            if hasattr(context.get("dag", {}), "dag_id")
+            else "unknown"
+        )
+        task_id = (
+            context.get("task", {}).task_id
+            if hasattr(context.get("task", {}), "task_id")
+            else "unknown"
+        )
         execution_date = context.get("execution_date", "unknown")
 
         logger.info(
@@ -127,7 +132,7 @@ class BaseNotificationOperator(BaseOperator):
                 "dag_id": dag_id,
                 "task_id": task_id,
                 "execution_date": str(execution_date),
-            }
+            },
         )
 
         try:
@@ -136,7 +141,7 @@ class BaseNotificationOperator(BaseOperator):
 
             logger.info(
                 f"Rendered message (length: {len(rendered_message)} chars)",
-                extra={"message_preview": rendered_message[:200]}
+                extra={"message_preview": rendered_message[:200]},
             )
 
             # Send notification
@@ -144,8 +149,7 @@ class BaseNotificationOperator(BaseOperator):
 
             if result:
                 logger.info(
-                    f"Notification sent successfully",
-                    extra={"operator": self.__class__.__name__}
+                    "Notification sent successfully", extra={"operator": self.__class__.__name__}
                 )
                 return True
             else:
@@ -165,15 +169,13 @@ class BaseNotificationOperator(BaseOperator):
                     "error_type": type(e).__name__,
                     "error_message": str(e),
                 },
-                exc_info=True
+                exc_info=True,
             )
-            raise AirflowException(
-                f"Notification failed: {str(e)}"
-            ) from e
+            raise AirflowException(f"Notification failed: {str(e)}") from e
 
     def on_kill(self):
         """Handle task kill event."""
         logger.warning(
             f"Notification operator {self.__class__.__name__} killed",
-            extra={"task_id": self.task_id}
+            extra={"task_id": self.task_id},
         )

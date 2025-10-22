@@ -21,14 +21,15 @@ Note: This DAG is designed to showcase all operators. In production, you would
 typically use one cluster type based on your infrastructure.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from airflow import DAG
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.python import PythonOperator
 
+from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
 from src.operators.spark.standalone_operator import SparkStandaloneOperator
 from src.operators.spark.yarn_operator import SparkYarnOperator
-from src.operators.spark.kubernetes_operator import SparkKubernetesOperator
 from src.utils.retry_policies import create_retry_config
 
 # DAG default arguments
@@ -68,7 +69,6 @@ def check_cluster_availability(**context):
 
     # Push to XCom for conditional execution
     context["task_instance"].xcom_push(key="available_clusters", value=available_clusters)
-    print(f"Available clusters: {available_clusters}")
 
 
 check_clusters = PythonOperator(
@@ -230,12 +230,8 @@ def aggregate_results(**context):
         # YARN and K8s jobs would also be collected if they ran
     }
 
-    print("=" * 80)
-    print("SPARK JOB EXECUTION SUMMARY")
-    print("=" * 80)
-    for job_name, job_id in results.items():
-        print(f"{job_name}: {job_id or 'NOT RUN'}")
-    print("=" * 80)
+    for _job_name, _job_id in results.items():
+        pass
 
 
 aggregate = PythonOperator(
@@ -265,14 +261,18 @@ check_clusters >> [yarn_word_count, yarn_sales_agg]
 check_clusters >> [k8s_word_count, k8s_sales_agg]
 
 # Aggregate all results
-[
-    standalone_word_count,
-    standalone_sales_agg,
-    yarn_word_count,
-    yarn_sales_agg,
-    k8s_word_count,
-    k8s_sales_agg,
-] >> aggregate >> complete
+(
+    [
+        standalone_word_count,
+        standalone_sales_agg,
+        yarn_word_count,
+        yarn_sales_agg,
+        k8s_word_count,
+        k8s_sales_agg,
+    ]
+    >> aggregate
+    >> complete
+)
 
 # ==============================================================================
 # Documentation Notes

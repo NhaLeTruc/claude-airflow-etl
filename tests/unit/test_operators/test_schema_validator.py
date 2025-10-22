@@ -5,9 +5,10 @@ Tests cover column validation, data type checking, missing/extra column detectio
 and schema compliance reporting.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
 from airflow.exceptions import AirflowException
 
 
@@ -71,7 +72,7 @@ class TestSchemaValidator:
             )
 
             # Mock database response with matching columns
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "integer"},
                     {"column_name": "name", "data_type": "character varying"},
@@ -103,7 +104,7 @@ class TestSchemaValidator:
             )
 
             # Mock database response missing 'email' column
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "integer"},
                     {"column_name": "name", "data_type": "character varying"},
@@ -136,7 +137,7 @@ class TestSchemaValidator:
             )
 
             # Mock database response with extra column
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "integer"},
                     {"column_name": "name", "data_type": "character varying"},
@@ -170,7 +171,7 @@ class TestSchemaValidator:
             )
 
             # Mock database response with matching types
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "integer"},
                     {"column_name": "amount", "data_type": "numeric"},
@@ -203,7 +204,7 @@ class TestSchemaValidator:
             )
 
             # Mock database response with wrong type for 'amount'
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "integer"},
                     {"column_name": "amount", "data_type": "text"},  # Wrong type!
@@ -235,7 +236,7 @@ class TestSchemaValidator:
             )
 
             # Mock database response with extra columns
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "integer"},
                     {"column_name": "extra1", "data_type": "text"},
@@ -268,9 +269,13 @@ class TestSchemaValidator:
             )
 
             # Mock database response with different order
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
-                    {"column_name": "name", "data_type": "character varying", "ordinal_position": 1},
+                    {
+                        "column_name": "name",
+                        "data_type": "character varying",
+                        "ordinal_position": 1,
+                    },
                     {"column_name": "id", "data_type": "integer", "ordinal_position": 2},
                 ]
 
@@ -300,10 +305,14 @@ class TestSchemaValidator:
             )
 
             # Mock database response with matching nullability
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "integer", "is_nullable": "NO"},
-                    {"column_name": "email", "data_type": "character varying", "is_nullable": "YES"},
+                    {
+                        "column_name": "email",
+                        "data_type": "character varying",
+                        "is_nullable": "YES",
+                    },
                 ]
 
                 result = operator.execute(mock_context)
@@ -322,7 +331,7 @@ class TestSchemaValidator:
                 expected_schema={"columns": []},
             )
 
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.side_effect = Exception("Table does not exist")
 
                 with pytest.raises(AirflowException):
@@ -350,7 +359,7 @@ class TestSchemaValidator:
             )
 
             # Mock database with multiple issues
-            with patch.object(operator, 'get_table_schema') as mock_get_schema:
+            with patch.object(operator, "get_table_schema") as mock_get_schema:
                 mock_get_schema.return_value = [
                     {"column_name": "id", "data_type": "text"},  # Wrong type
                     {"column_name": "name", "data_type": "character varying"},

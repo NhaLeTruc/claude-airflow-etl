@@ -5,28 +5,28 @@
 -r requirements.txt
 
 # Testing Framework
-pytest==8.0.0
-pytest-cov==4.1.0
-pytest-mock==3.12.0
-pytest-docker==2.0.1
-pytest-xdist==3.5.0
+pytest==8.3.4
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+pytest-docker==3.1.1
+pytest-xdist==3.6.1
 
 # Code Quality - Linting
-ruff==0.1.11
+ruff==0.8.4
 
 # Code Quality - Formatting
-black==24.1.0
+black==24.10.0
 
 # Code Quality - Type Checking
-mypy==1.8.0
-types-requests==2.31.0.20240106
+mypy==1.14.0
+types-requests==2.32.0.20241016
 
 # Pre-commit Hooks
-pre-commit==3.6.0
+pre-commit==4.0.1
 
 # Code Complexity Analysis
 radon==6.0.1
 
 # Documentation
-mkdocs==1.5.3
-mkdocs-material==9.5.3
+mkdocs==1.6.1
+mkdocs-material==9.5.48

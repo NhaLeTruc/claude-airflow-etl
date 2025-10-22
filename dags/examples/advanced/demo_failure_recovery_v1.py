@@ -12,7 +12,7 @@ Demonstrates:
 This is a P1 MVP example showing resilient pipeline execution patterns.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
@@ -71,18 +71,6 @@ def compensation_logic(**context):
         dag_id=dag_id,
         execution_date=str(execution_date),
     )
-
-    print("============================================")
-    print("Compensation/Cleanup Task")
-    print(f"DAG: {dag_id}")
-    print(f"Execution Date: {execution_date}")
-    print("============================================")
-    print("Performing cleanup operations...")
-    print("✓ Rolling back partial changes")
-    print("✓ Releasing locks")
-    print("✓ Cleaning temporary files")
-    print("✓ Sending failure notifications")
-    print("Cleanup completed")
 
 
 # Create DAG

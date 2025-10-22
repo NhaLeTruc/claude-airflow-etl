@@ -29,15 +29,16 @@ EFFICIENCY:
 - Scalable to billions of records
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+
 from airflow import DAG
+from airflow.operators.dummy import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.python import PythonOperator
-from airflow.operators.dummy import DummyOperator
 from airflow.utils.dates import days_ago
 
-from src.utils.logger import get_logger
 from src.hooks.warehouse_hook import WarehouseHook
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -94,7 +95,9 @@ def get_last_watermark(**context):
     )
 
     # Push to XCom for downstream tasks
-    context["task_instance"].xcom_push(key="last_watermark", value=str(last_watermark) if last_watermark else None)
+    context["task_instance"].xcom_push(
+        key="last_watermark", value=str(last_watermark) if last_watermark else None
+    )
 
     return last_watermark
 

@@ -72,7 +72,7 @@ class TestDynamicDAGExecution:
 
         # Create DAG run
         dag.clear()
-        dag_run = dag.create_dagrun(
+        dag.create_dagrun(
             run_id=f"test_dependency_run_{execution_date.isoformat()}",
             execution_date=execution_date,
             state=State.RUNNING,
@@ -166,7 +166,7 @@ class TestDynamicDAGExecution:
         if len(dag_bag.dags) == 0:
             pytest.skip("No DAGs found for testing")
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             # Schedule interval should be set
             assert dag.schedule_interval is not None
 
@@ -177,7 +177,7 @@ class TestDynamicDAGExecution:
         if len(dag_bag.dags) == 0:
             pytest.skip("No DAGs found for testing")
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             assert dag.start_date is not None
             assert isinstance(dag.start_date, datetime)
 
@@ -192,7 +192,7 @@ class TestDynamicDAGExecution:
         execution_date = datetime(2024, 10, 15, 12, 0, 0)
 
         # Create DAG run
-        dag_run = dag.create_dagrun(
+        dag.create_dagrun(
             run_id=f"test_context_run_{execution_date.isoformat()}",
             execution_date=execution_date,
             state=State.RUNNING,
@@ -265,7 +265,7 @@ class TestDynamicDAGExecution:
             pytest.skip("No DAGs found for testing")
 
         # DAGs should have error handling configured
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             # Check that tasks have failure callbacks or email settings
             for task in dag.tasks:
                 # Should have some error handling configured
@@ -278,7 +278,7 @@ class TestDynamicDAGExecution:
         if len(dag_bag.dags) == 0:
             pytest.skip("No DAGs found for testing")
 
-        for dag_id, dag in dag_bag.dags.items():
+        for _dag_id, dag in dag_bag.dags.items():
             assert dag.description is not None
             assert len(dag.description) > 0
 

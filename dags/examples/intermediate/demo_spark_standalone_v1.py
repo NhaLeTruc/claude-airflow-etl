@@ -13,7 +13,8 @@ Prerequisites:
 - Airflow connection 'spark_standalone' configured
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from airflow import DAG
 from airflow.operators.dummy import DummyOperator
 

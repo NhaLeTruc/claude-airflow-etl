@@ -5,11 +5,12 @@ Tests cover webhook POST requests, message card formatting, theme colors,
 facts/actions sections, and error handling.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
-from airflow.exceptions import AirflowException
 import json
+from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
+from airflow.exceptions import AirflowException
 
 
 @pytest.fixture
@@ -77,7 +78,7 @@ class TestTeamsNotificationOperator:
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_webhook_post_request_success(self, mock_post, mock_context):
         """Test successful webhook POST request."""
         try:
@@ -103,7 +104,7 @@ class TestTeamsNotificationOperator:
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_webhook_post_request_failure(self, mock_post, mock_context):
         """Test webhook POST request failure handling."""
         try:
@@ -126,7 +127,7 @@ class TestTeamsNotificationOperator:
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_message_card_structure(self, mock_post, mock_context):
         """Test that message is formatted as proper Teams message card."""
         try:
@@ -148,14 +149,16 @@ class TestTeamsNotificationOperator:
 
             # Verify the payload structure
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
-            assert '@type' in payload or 'type' in payload  # MessageCard type
-            assert 'title' in payload or 'summary' in payload
+            assert "@type" in payload or "type" in payload  # MessageCard type
+            assert "title" in payload or "summary" in payload
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_theme_color_configuration(self, mock_post, mock_context):
         """Test theme color can be configured for message card."""
         try:
@@ -177,14 +180,16 @@ class TestTeamsNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
-            assert 'themeColor' in payload
-            assert payload['themeColor'] == "FF0000"
+            assert "themeColor" in payload
+            assert payload["themeColor"] == "FF0000"
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_facts_section_in_message_card(self, mock_post, mock_context):
         """Test that facts can be added to message card."""
         try:
@@ -211,14 +216,16 @@ class TestTeamsNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
             # Facts should be in the payload
-            assert 'sections' in payload or 'facts' in payload
+            assert "sections" in payload or "facts" in payload
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_actions_section_in_message_card(self, mock_post, mock_context):
         """Test that action buttons can be added to message card."""
         try:
@@ -248,14 +255,16 @@ class TestTeamsNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
             # Actions should be in the payload
-            assert 'potentialAction' in payload or 'actions' in payload
+            assert "potentialAction" in payload or "actions" in payload
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_template_rendering_in_message(self, mock_post, mock_context):
         """Test Jinja2 template rendering in message."""
         try:
@@ -276,7 +285,9 @@ class TestTeamsNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
             # Verify template was rendered (dag_id should be replaced)
             payload_str = json.dumps(payload)
@@ -285,12 +296,13 @@ class TestTeamsNotificationOperator:
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_connection_timeout_handling(self, mock_post, mock_context):
         """Test handling of connection timeout errors."""
         try:
-            from src.operators.notifications.teams_operator import TeamsNotificationOperator
             import requests
+
+            from src.operators.notifications.teams_operator import TeamsNotificationOperator
 
             mock_post.side_effect = requests.Timeout("Connection timeout")
 
@@ -305,12 +317,13 @@ class TestTeamsNotificationOperator:
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_network_error_handling(self, mock_post, mock_context):
         """Test handling of network connection errors."""
         try:
-            from src.operators.notifications.teams_operator import TeamsNotificationOperator
             import requests
+
+            from src.operators.notifications.teams_operator import TeamsNotificationOperator
 
             mock_post.side_effect = requests.ConnectionError("Network unreachable")
 
@@ -330,11 +343,11 @@ class TestTeamsNotificationOperator:
         try:
             from src.operators.notifications.teams_operator import TeamsNotificationOperator
 
-            assert hasattr(TeamsNotificationOperator, 'template_fields')
+            assert hasattr(TeamsNotificationOperator, "template_fields")
             template_fields = TeamsNotificationOperator.template_fields
 
             # Should include message_template and possibly title
-            assert 'message_template' in template_fields or 'title' in template_fields
+            assert "message_template" in template_fields or "title" in template_fields
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
@@ -343,13 +356,13 @@ class TestTeamsNotificationOperator:
         try:
             from src.operators.notifications.teams_operator import TeamsNotificationOperator
 
-            assert hasattr(TeamsNotificationOperator, 'ui_color')
+            assert hasattr(TeamsNotificationOperator, "ui_color")
             # Teams typically uses purple/blue colors
-            assert TeamsNotificationOperator.ui_color.startswith('#')
+            assert TeamsNotificationOperator.ui_color.startswith("#")
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_custom_title_rendering(self, mock_post, mock_context):
         """Test template rendering in title field."""
         try:
@@ -370,7 +383,9 @@ class TestTeamsNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
             # Title should contain rendered values
             payload_str = json.dumps(payload)
@@ -378,7 +393,7 @@ class TestTeamsNotificationOperator:
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_retry_on_server_error(self, mock_post, mock_context):
         """Test retry behavior on 5xx server errors."""
         try:
@@ -407,7 +422,7 @@ class TestTeamsNotificationOperator:
         except ImportError:
             pytest.skip("TeamsNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_markdown_formatting_support(self, mock_post, mock_context):
         """Test that markdown formatting is supported in message."""
         try:
@@ -428,7 +443,9 @@ class TestTeamsNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
             # Markdown should be preserved in the payload
             payload_str = json.dumps(payload)

@@ -29,16 +29,17 @@ Constitutional Compliance:
 - Principle V: Observability (event tracking, file processing audit)
 """
 
-from datetime import datetime, timedelta
-from airflow import DAG
-from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.sensors.filesystem import FileSensor
-from airflow.operators.dummy import DummyOperator
-from airflow.utils.trigger_rule import TriggerRule
+import hashlib
 import logging
 import os
-import hashlib
+from datetime import datetime, timedelta
 from pathlib import Path
+
+from airflow import DAG
+from airflow.operators.dummy import DummyOperator
+from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.sensors.filesystem import FileSensor
+from airflow.utils.trigger_rule import TriggerRule
 
 logger = logging.getLogger(__name__)
 
@@ -79,12 +80,12 @@ def setup_landing_zone(**context):
     filepath = os.path.join(LANDING_ZONE, filename)
 
     # Create dummy file with sample content
-    sample_data = f"""transaction_id,customer_id,product_id,quantity,amount
+    sample_data = """transaction_id,customer_id,product_id,quantity,amount
 TXN001,CUST1234,PROD001,5,129.99
 TXN002,CUST5678,PROD002,2,49.98
 TXN003,CUST9012,PROD003,1,199.99
 """
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         f.write(sample_data)
 
     logger.info(f"Simulated file arrival: {filepath}")
@@ -108,10 +109,7 @@ def extract_file_metadata(**context):
     task_instance = context["task_instance"]
 
     # Get filename from sensor or setup task
-    filename = task_instance.xcom_pull(
-        task_ids="setup_landing_zone",
-        key="trigger_file"
-    )
+    filename = task_instance.xcom_pull(task_ids="setup_landing_zone", key="trigger_file")
 
     if not filename:
         logger.error("No trigger file found")
@@ -129,16 +127,16 @@ def extract_file_metadata(**context):
     file_size_mb = file_size_bytes / (1024 * 1024)
 
     # Calculate file checksum for idempotency
-    with open(filepath, 'rb') as f:
+    with open(filepath, "rb") as f:
         file_hash = hashlib.md5(f.read()).hexdigest()
 
     # Count lines to estimate record count
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         line_count = sum(1 for line in f) - 1  # Subtract header
 
     # Determine file format
     file_extension = Path(filepath).suffix.lower()
-    supported_formats = ['.csv', '.json', '.parquet']
+    supported_formats = [".csv", ".json", ".parquet"]
     is_supported_format = file_extension in supported_formats
 
     metadata = {
@@ -184,10 +182,7 @@ def decide_processing_path(**context):
     """
     task_instance = context["task_instance"]
 
-    metadata = task_instance.xcom_pull(
-        task_ids="extract_file_metadata",
-        key="file_metadata"
-    )
+    metadata = task_instance.xcom_pull(task_ids="extract_file_metadata", key="file_metadata")
 
     if not metadata:
         logger.error("No file metadata available for branching decision")
@@ -201,10 +196,14 @@ def decide_processing_path(**context):
     threshold_mb = 10.0
 
     if file_size_mb < threshold_mb:
-        logger.info(f"File size {file_size_mb:.2f} MB < {threshold_mb} MB: using small file processing")
+        logger.info(
+            f"File size {file_size_mb:.2f} MB < {threshold_mb} MB: using small file processing"
+        )
         return "process_small_file"
     else:
-        logger.info(f"File size {file_size_mb:.2f} MB >= {threshold_mb} MB: using large file processing")
+        logger.info(
+            f"File size {file_size_mb:.2f} MB >= {threshold_mb} MB: using large file processing"
+        )
         return "process_large_file"
 
 
@@ -220,10 +219,7 @@ def process_small_file(**context):
     """
     task_instance = context["task_instance"]
 
-    metadata = task_instance.xcom_pull(
-        task_ids="extract_file_metadata",
-        key="file_metadata"
-    )
+    metadata = task_instance.xcom_pull(task_ids="extract_file_metadata", key="file_metadata")
 
     logger.info(f"Processing small file: {metadata['filename']}")
     logger.info(f"Estimated records: {metadata['estimated_records']:,}")
@@ -232,7 +228,7 @@ def process_small_file(**context):
     # In real implementation: parse CSV, validate, load to staging table
     filepath = metadata["filepath"]
 
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         lines = f.readlines()
         records_processed = len(lines) - 1  # Subtract header
 
@@ -264,10 +260,7 @@ def process_large_file(**context):
     """
     task_instance = context["task_instance"]
 
-    metadata = task_instance.xcom_pull(
-        task_ids="extract_file_metadata",
-        key="file_metadata"
-    )
+    metadata = task_instance.xcom_pull(task_ids="extract_file_metadata", key="file_metadata")
 
     logger.info(f"Processing large file: {metadata['filename']}")
     logger.info(f"Estimated records: {metadata['estimated_records']:,}")
@@ -275,7 +268,7 @@ def process_large_file(**context):
     # Simulate parallel chunked processing
     # In real implementation: split file, process chunks in parallel, merge results
     chunk_size = 1000  # Records per chunk
-    estimated_chunks = max(1, metadata['estimated_records'] // chunk_size)
+    estimated_chunks = max(1, metadata["estimated_records"] // chunk_size)
 
     logger.info(f"Processing in {estimated_chunks} parallel chunks")
 
@@ -289,7 +282,9 @@ def process_large_file(**context):
         "status": "success",
     }
 
-    logger.info(f"Large file processing complete: {metadata['estimated_records']} records in {estimated_chunks} chunks")
+    logger.info(
+        f"Large file processing complete: {metadata['estimated_records']} records in {estimated_chunks} chunks"
+    )
 
     task_instance.xcom_push(key="processing_result", value=result)
 
@@ -305,10 +300,7 @@ def handle_unsupported_format(**context):
     """
     task_instance = context["task_instance"]
 
-    metadata = task_instance.xcom_pull(
-        task_ids="extract_file_metadata",
-        key="file_metadata"
-    )
+    metadata = task_instance.xcom_pull(task_ids="extract_file_metadata", key="file_metadata")
 
     logger.warning(f"Unsupported file format: {metadata.get('file_format')}")
     logger.warning(f"File: {metadata.get('filename')}")
@@ -340,11 +332,7 @@ def archive_processed_file(**context):
 
     # Get processing result and metadata
     result = task_instance.xcom_pull(
-        task_ids=[
-            "process_small_file",
-            "process_large_file",
-            "handle_unsupported_format"
-        ]
+        task_ids=["process_small_file", "process_large_file", "handle_unsupported_format"]
     )
 
     # Get the non-None result
@@ -354,10 +342,7 @@ def archive_processed_file(**context):
         logger.warning("No processing result found - skipping archive")
         return
 
-    metadata = task_instance.xcom_pull(
-        task_ids="extract_file_metadata",
-        key="file_metadata"
-    )
+    metadata = task_instance.xcom_pull(task_ids="extract_file_metadata", key="file_metadata")
 
     logger.info(f"Archiving file: {metadata['filename']}")
     logger.info(f"File hash: {metadata['file_hash']}")
@@ -380,17 +365,10 @@ def log_completion(**context):
     """
     task_instance = context["task_instance"]
 
-    metadata = task_instance.xcom_pull(
-        task_ids="extract_file_metadata",
-        key="file_metadata"
-    )
+    metadata = task_instance.xcom_pull(task_ids="extract_file_metadata", key="file_metadata")
 
     result = task_instance.xcom_pull(
-        task_ids=[
-            "process_small_file",
-            "process_large_file",
-            "handle_unsupported_format"
-        ]
+        task_ids=["process_small_file", "process_large_file", "handle_unsupported_format"]
     )
 
     processing_result = next((r for r in result if r is not None), None)
@@ -423,7 +401,6 @@ with DAG(
     tags=["advanced", "event-driven", "sensor", "dynamic", "demo"],
     doc_md=__doc__,
 ) as dag:
-
     # Setup: Prepare landing zone and simulate file arrival
     # In production, this step wouldn't exist - files arrive externally
     setup = PythonOperator(

@@ -37,7 +37,7 @@ class TestOperatorRegistry:
 
     def test_get_operator_class_raises_for_unregistered_operator(self):
         """Test that getting unregistered operator raises error."""
-        from dags.factory.operator_registry import OperatorRegistry, OperatorNotFoundError
+        from dags.factory.operator_registry import OperatorNotFoundError, OperatorRegistry
 
         registry = OperatorRegistry()
 
@@ -171,7 +171,7 @@ class TestOperatorRegistry:
 
     def test_registry_is_case_sensitive(self):
         """Test that operator names are case-sensitive."""
-        from dags.factory.operator_registry import OperatorRegistry, OperatorNotFoundError
+        from dags.factory.operator_registry import OperatorNotFoundError, OperatorRegistry
 
         registry = OperatorRegistry()
 
@@ -195,7 +195,7 @@ class TestOperatorRegistry:
         """Test that custom operators from src/operators/ can be registered."""
         from dags.factory.operator_registry import OperatorRegistry
 
-        registry = OperatorRegistry()
+        OperatorRegistry()
 
         # Placeholder for custom operators we'll implement later
         # registry.register_operator("SparkSubmitOperatorCustom", SparkSubmitOperatorCustom)

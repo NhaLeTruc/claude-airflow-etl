@@ -5,13 +5,13 @@ Provides common functionality for all data quality operators including
 severity levels, threshold validation, result storage, and error handling.
 """
 
-from enum import Enum
-from typing import Any, Dict, Optional
-from datetime import datetime
 from abc import abstractmethod
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
-from airflow.models import BaseOperator
 from airflow.exceptions import AirflowException
+from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
 from src.utils.logger import get_logger
@@ -56,7 +56,7 @@ class BaseQualityOperator(BaseOperator):
         *,
         table_name: str,
         severity: QualitySeverity = QualitySeverity.ERROR,
-        threshold: Optional[float] = None,
+        threshold: float | None = None,
         warehouse_conn_id: str = "warehouse_default",
         store_results: bool = True,
         **kwargs,
@@ -75,12 +75,11 @@ class BaseQualityOperator(BaseOperator):
         self.store_results = store_results
 
         # Validate threshold if provided
-        if threshold is not None:
-            if not (0.0 <= threshold <= 1.0):
-                raise ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}")
+        if threshold is not None and not (0.0 <= threshold <= 1.0):
+            raise ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}")
 
     @abstractmethod
-    def perform_check(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def perform_check(self, context: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the quality check.
 
@@ -97,7 +96,7 @@ class BaseQualityOperator(BaseOperator):
         """
         raise NotImplementedError("Subclasses must implement perform_check()")
 
-    def validate_threshold(self, result: Dict[str, Any]) -> bool:
+    def validate_threshold(self, result: dict[str, Any]) -> bool:
         """
         Validate result against threshold.
 
@@ -116,7 +115,7 @@ class BaseQualityOperator(BaseOperator):
         # Check if value meets threshold
         return value >= self.threshold
 
-    def handle_result(self, result: Dict[str, Any], context: Dict[str, Any]) -> None:
+    def handle_result(self, result: dict[str, Any], context: dict[str, Any]) -> None:
         """
         Handle quality check result based on severity.
 
@@ -125,64 +124,63 @@ class BaseQualityOperator(BaseOperator):
         :raises AirflowException: If severity is CRITICAL or ERROR and check failed
         """
         passed = result.get("passed", False)
-        severity_name = self.severity.name
 
         if not passed:
             message = result.get("message", f"Quality check failed for {self.table_name}")
 
             if self.severity == QualitySeverity.CRITICAL:
                 logger.error(
-                    f"CRITICAL quality check failure",
+                    "CRITICAL quality check failure",
                     extra={
                         "table": self.table_name,
                         "check_type": self.__class__.__name__,
                         "result": result,
-                    }
+                    },
                 )
                 raise AirflowException(f"CRITICAL: {message}")
 
             elif self.severity == QualitySeverity.ERROR:
                 logger.error(
-                    f"Quality check error",
+                    "Quality check error",
                     extra={
                         "table": self.table_name,
                         "check_type": self.__class__.__name__,
                         "result": result,
-                    }
+                    },
                 )
                 raise AirflowException(f"ERROR: {message}")
 
             elif self.severity == QualitySeverity.WARNING:
                 logger.warning(
-                    f"Quality check warning",
+                    "Quality check warning",
                     extra={
                         "table": self.table_name,
                         "check_type": self.__class__.__name__,
                         "result": result,
-                    }
+                    },
                 )
                 # Don't fail task for WARNING
 
             else:  # INFO
                 logger.info(
-                    f"Quality check info",
+                    "Quality check info",
                     extra={
                         "table": self.table_name,
                         "check_type": self.__class__.__name__,
                         "result": result,
-                    }
+                    },
                 )
         else:
             logger.info(
-                f"Quality check passed",
+                "Quality check passed",
                 extra={
                     "table": self.table_name,
                     "check_type": self.__class__.__name__,
                     "result": result,
-                }
+                },
             )
 
-    def store_result(self, result: Dict[str, Any], context: Dict[str, Any]) -> None:
+    def store_result(self, result: dict[str, Any], context: dict[str, Any]) -> None:
         """
         Store quality check result to database.
 
@@ -195,18 +193,14 @@ class BaseQualityOperator(BaseOperator):
         try:
             # TODO: Implement result storage to warehouse.quality_check_results table
             # This would require WarehouseHook integration
-            logger.debug(
-                f"Result storage not yet implemented",
-                extra={"result": result}
-            )
+            logger.debug("Result storage not yet implemented", extra={"result": result})
         except Exception as e:
             # Don't fail task if result storage fails
             logger.warning(
-                f"Failed to store quality check result: {str(e)}",
-                extra={"result": result}
+                f"Failed to store quality check result: {str(e)}", extra={"result": result}
             )
 
-    def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, context: dict[str, Any]) -> dict[str, Any]:
         """
         Execute the quality check.
 
@@ -214,8 +208,16 @@ class BaseQualityOperator(BaseOperator):
         :return: Quality check result dictionary
         :raises AirflowException: If check fails with ERROR or CRITICAL severity
         """
-        dag_id = context.get("dag", {}).dag_id if hasattr(context.get("dag", {}), "dag_id") else "unknown"
-        task_id = context.get("task", {}).task_id if hasattr(context.get("task", {}), "task_id") else "unknown"
+        dag_id = (
+            context.get("dag", {}).dag_id
+            if hasattr(context.get("dag", {}), "dag_id")
+            else "unknown"
+        )
+        task_id = (
+            context.get("task", {}).task_id
+            if hasattr(context.get("task", {}), "task_id")
+            else "unknown"
+        )
         execution_date = context.get("execution_date", "unknown")
 
         logger.info(
@@ -225,7 +227,7 @@ class BaseQualityOperator(BaseOperator):
                 "task_id": task_id,
                 "table": self.table_name,
                 "severity": self.severity.name,
-            }
+            },
         )
 
         try:
@@ -271,15 +273,13 @@ class BaseQualityOperator(BaseOperator):
                     "table": self.table_name,
                     "error_type": type(e).__name__,
                 },
-                exc_info=True
+                exc_info=True,
             )
-            raise AirflowException(
-                f"Quality check failed for {self.table_name}: {str(e)}"
-            ) from e
+            raise AirflowException(f"Quality check failed for {self.table_name}: {str(e)}") from e
 
     def on_kill(self):
         """Handle task kill event."""
         logger.warning(
             f"Quality check operator {self.__class__.__name__} killed",
-            extra={"task_id": self.task_id, "table": self.table_name}
+            extra={"task_id": self.task_id, "table": self.table_name},
         )

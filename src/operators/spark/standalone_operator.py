@@ -4,13 +4,13 @@ Spark Standalone Operator for Apache Airflow.
 Custom operator for submitting Spark jobs to a Standalone cluster.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from airflow.models import BaseOperator
 from airflow.exceptions import AirflowException
+from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from src.hooks.spark_hook import SparkHook, SparkJobStatus
+from src.hooks.spark_hook import SparkHook
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -45,15 +45,15 @@ class SparkStandaloneOperator(BaseOperator):
         *,
         application: str,
         master: str,
-        application_args: Optional[List[str]] = None,
-        conf: Optional[Dict[str, str]] = None,
-        name: Optional[str] = None,
+        application_args: list[str] | None = None,
+        conf: dict[str, str] | None = None,
+        name: str | None = None,
         deploy_mode: str = "client",
-        driver_memory: Optional[str] = None,
-        driver_cores: Optional[str] = None,
-        executor_memory: Optional[str] = None,
-        executor_cores: Optional[str] = None,
-        num_executors: Optional[str] = None,
+        driver_memory: str | None = None,
+        driver_cores: str | None = None,
+        executor_memory: str | None = None,
+        executor_cores: str | None = None,
+        num_executors: str | None = None,
         verbose: bool = False,
         conn_id: str = "spark_default",
         **kwargs,
@@ -69,7 +69,9 @@ class SparkStandaloneOperator(BaseOperator):
 
         # Validate master URL
         if not master.startswith("spark://") and master != "local":
-            raise ValueError(f"Invalid master URL: {master}. Must start with 'spark://' or be 'local'")
+            raise ValueError(
+                f"Invalid master URL: {master}. Must start with 'spark://' or be 'local'"
+            )
 
         # Validate deploy mode
         if deploy_mode not in ["client", "cluster"]:
@@ -93,10 +95,10 @@ class SparkStandaloneOperator(BaseOperator):
         self.verbose = verbose
         self.conn_id = conn_id
 
-        self._job_id: Optional[str] = None
-        self._hook: Optional[SparkHook] = None
+        self._job_id: str | None = None
+        self._hook: SparkHook | None = None
 
-    def execute(self, context: Dict[str, Any]) -> str:
+    def execute(self, context: dict[str, Any]) -> str:
         """
         Execute the Spark Standalone job.
 

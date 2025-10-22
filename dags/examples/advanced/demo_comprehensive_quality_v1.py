@@ -30,13 +30,13 @@ Constitutional Compliance:
 - Principle V: Observability (quality metrics logging and tracking)
 """
 
-from datetime import datetime, timedelta
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.postgres_operator import PostgresOperator
-from airflow.utils.task_group import TaskGroup
-from airflow.exceptions import AirflowException
 import logging
+from datetime import datetime, timedelta
+
+from airflow import DAG
+from airflow.exceptions import AirflowException
+from airflow.operators.python import PythonOperator
+from airflow.utils.task_group import TaskGroup
 
 logger = logging.getLogger(__name__)
 
@@ -96,14 +96,13 @@ def validate_schema(**context):
     missing_columns = set(expected_columns.keys()) - set(actual_columns.keys())
     extra_columns = set(actual_columns.keys()) - set(expected_columns.keys())
     type_mismatches = [
-        col for col in expected_columns
+        col
+        for col in expected_columns
         if col in actual_columns and actual_columns[col] != expected_columns[col]
     ]
 
     validation_passed = (
-        len(missing_columns) == 0 and
-        len(extra_columns) == 0 and
-        len(type_mismatches) == 0
+        len(missing_columns) == 0 and len(extra_columns) == 0 and len(type_mismatches) == 0
     )
 
     result = {
@@ -156,6 +155,7 @@ def validate_completeness(**context):
     # Simulate row count check
     # In real implementation: SELECT COUNT(*) FROM fact_sales WHERE date = ...
     import random
+
     random.seed(context["execution_date"].day)
 
     actual_row_count = random.randint(950, 1050)
@@ -168,8 +168,7 @@ def validate_completeness(**context):
     upper_bound = expected_row_count * (1 + tolerance_percentage / 100)
 
     validation_passed = (
-        actual_row_count >= min_row_count and
-        lower_bound <= actual_row_count <= upper_bound
+        actual_row_count >= min_row_count and lower_bound <= actual_row_count <= upper_bound
     )
 
     deviation_percentage = abs((actual_row_count - expected_row_count) / expected_row_count * 100)
@@ -291,6 +290,7 @@ def validate_uniqueness(**context):
     # HAVING COUNT(*) > 1
 
     import random
+
     random.seed(context["execution_date"].day + 1)
 
     total_records = 1000
@@ -360,6 +360,7 @@ def validate_null_rate(**context):
     # FROM fact_sales
 
     import random
+
     random.seed(context["execution_date"].day + 2)
 
     total_records = 1000
@@ -415,24 +416,19 @@ def aggregate_quality_results(**context):
 
     # Pull all quality check results from XCom
     schema_result = task_instance.xcom_pull(
-        task_ids="quality_checks.validate_schema",
-        key="schema_check"
+        task_ids="quality_checks.validate_schema", key="schema_check"
     )
     completeness_result = task_instance.xcom_pull(
-        task_ids="quality_checks.validate_completeness",
-        key="completeness_check"
+        task_ids="quality_checks.validate_completeness", key="completeness_check"
     )
     freshness_result = task_instance.xcom_pull(
-        task_ids="quality_checks.validate_freshness",
-        key="freshness_check"
+        task_ids="quality_checks.validate_freshness", key="freshness_check"
     )
     uniqueness_result = task_instance.xcom_pull(
-        task_ids="quality_checks.validate_uniqueness",
-        key="uniqueness_check"
+        task_ids="quality_checks.validate_uniqueness", key="uniqueness_check"
     )
     null_rate_result = task_instance.xcom_pull(
-        task_ids="quality_checks.validate_null_rate",
-        key="null_rate_check"
+        task_ids="quality_checks.validate_null_rate", key="null_rate_check"
     )
 
     all_checks = [
@@ -448,15 +444,13 @@ def aggregate_quality_results(**context):
     passed_checks = len([c for c in all_checks if c and c.get("passed")])
     failed_checks = total_checks - passed_checks
 
-    critical_failures = len([
-        c for c in all_checks
-        if c and not c.get("passed") and c.get("severity") == "CRITICAL"
-    ])
+    critical_failures = len(
+        [c for c in all_checks if c and not c.get("passed") and c.get("severity") == "CRITICAL"]
+    )
 
-    warning_failures = len([
-        c for c in all_checks
-        if c and not c.get("passed") and c.get("severity") == "WARNING"
-    ])
+    warning_failures = len(
+        [c for c in all_checks if c and not c.get("passed") and c.get("severity") == "WARNING"]
+    )
 
     overall_quality_score = (passed_checks / total_checks * 100) if total_checks > 0 else 0
 
@@ -553,7 +547,6 @@ with DAG(
     tags=["advanced", "quality", "validation", "comprehensive", "demo"],
     doc_md=__doc__,
 ) as dag:
-
     # Start task
     start = PythonOperator(
         task_id="start",
@@ -562,7 +555,6 @@ with DAG(
 
     # All 5 quality checks in parallel task group
     with TaskGroup(group_id="quality_checks") as quality_checks:
-
         # 1. Schema Validation (CRITICAL)
         schema_check = PythonOperator(
             task_id="validate_schema",

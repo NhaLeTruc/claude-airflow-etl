@@ -52,7 +52,6 @@ with DAG(
     catchup=False,
     tags=["demo", "beginner", "notifications"],
 ) as dag:
-
     # Task 1: Simple bash task that succeeds
     simple_success_task = BashOperator(
         task_id="simple_success_task",
@@ -116,10 +115,9 @@ All tasks completed successfully!
     # Task 5: Python task that simulates work
     def process_data(**context):
         """Simulate data processing."""
-        import time
         import random
+        import time
 
-        print(f"Processing data for execution date: {context['ds']}")
         time.sleep(2)  # Simulate processing
 
         # Return some stats for downstream use

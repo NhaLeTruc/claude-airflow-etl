@@ -5,9 +5,10 @@ Tests quality checks running against actual warehouse database with
 result storage and end-to-end validation.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.mark.integration

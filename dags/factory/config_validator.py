@@ -8,7 +8,7 @@ and verifies task references.
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 import jsonschema
 from jsonschema import ValidationError as JSONSchemaValidationError
@@ -23,8 +23,8 @@ class ValidationResult:
     """Result of configuration validation."""
 
     is_valid: bool
-    errors: List[str]
-    config: Optional[Dict[str, Any]] = None
+    errors: list[str]
+    config: dict[str, Any] | None = None
 
 
 class ConfigValidator:
@@ -35,7 +35,7 @@ class ConfigValidator:
     including circular dependency detection and task reference verification.
     """
 
-    def __init__(self, schema_path: Optional[str] = None) -> None:
+    def __init__(self, schema_path: str | None = None) -> None:
         """
         Initialize configuration validator.
 
@@ -43,13 +43,15 @@ class ConfigValidator:
             schema_path: Path to JSON schema file (default: dags/config/schemas/dag-config-schema.json)
         """
         if schema_path is None:
-            schema_path = str(Path(__file__).parent.parent / "config" / "schemas" / "dag-config-schema.json")
+            schema_path = str(
+                Path(__file__).parent.parent / "config" / "schemas" / "dag-config-schema.json"
+            )
 
         self.schema_path = schema_path
         self.schema = self._load_schema()
         logger.debug("ConfigValidator initialized", schema_path=schema_path)
 
-    def _load_schema(self) -> Dict[str, Any]:
+    def _load_schema(self) -> dict[str, Any]:
         """
         Load JSON schema from file.
 
@@ -76,7 +78,7 @@ class ConfigValidator:
             logger.error(msg, error=str(e))
             raise
 
-    def validate(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate(self, config: dict[str, Any]) -> ValidationResult:
         """
         Validate DAG configuration.
 
@@ -86,7 +88,7 @@ class ConfigValidator:
         Returns:
             ValidationResult with validation status and any errors
         """
-        errors: List[str] = []
+        errors: list[str] = []
 
         # Step 1: Validate against JSON schema
         try:
@@ -135,11 +137,13 @@ class ConfigValidator:
         if is_valid:
             logger.info("Configuration validation passed", dag_id=dag_id, task_count=len(tasks))
         else:
-            logger.warning("Configuration validation failed", dag_id=dag_id, error_count=len(errors))
+            logger.warning(
+                "Configuration validation failed", dag_id=dag_id, error_count=len(errors)
+            )
 
         return ValidationResult(is_valid=is_valid, errors=errors, config=config)
 
-    def _detect_circular_dependencies(self, config: Dict[str, Any]) -> Optional[str]:
+    def _detect_circular_dependencies(self, config: dict[str, Any]) -> str | None:
         """
         Detect circular dependencies in task graph.
 
@@ -154,18 +158,18 @@ class ConfigValidator:
         tasks = config.get("tasks", [])
 
         # Build adjacency list
-        graph: Dict[str, List[str]] = {}
+        graph: dict[str, list[str]] = {}
         for task in tasks:
             task_id = task.get("task_id")
             dependencies = task.get("dependencies", [])
             graph[task_id] = dependencies
 
         # Track visited nodes and recursion stack
-        visited: Set[str] = set()
-        rec_stack: Set[str] = set()
-        cycle_path: List[str] = []
+        visited: set[str] = set()
+        rec_stack: set[str] = set()
+        cycle_path: list[str] = []
 
-        def dfs(node: str, path: List[str]) -> bool:
+        def dfs(node: str, path: list[str]) -> bool:
             """Depth-first search to detect cycle."""
             visited.add(node)
             rec_stack.add(node)
@@ -187,10 +191,9 @@ class ConfigValidator:
             return False
 
         # Check each task for cycles
-        for task_id in graph.keys():
-            if task_id not in visited:
-                if dfs(task_id, []):
-                    return " -> ".join(cycle_path)
+        for task_id in graph:
+            if task_id not in visited and dfs(task_id, []):
+                return " -> ".join(cycle_path)
 
         return None
 
@@ -224,7 +227,7 @@ class ConfigValidator:
 
 
 # Global validator instance
-_validator: Optional[ConfigValidator] = None
+_validator: ConfigValidator | None = None
 
 
 def get_default_validator() -> ConfigValidator:

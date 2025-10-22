@@ -4,13 +4,13 @@ Spark Kubernetes Operator for Apache Airflow.
 Custom operator for submitting Spark jobs to a Kubernetes cluster.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from airflow.models import BaseOperator
 from airflow.exceptions import AirflowException
+from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from src.hooks.spark_hook import SparkHook, SparkJobStatus
+from src.hooks.spark_hook import SparkHook
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -50,19 +50,19 @@ class SparkKubernetesOperator(BaseOperator):
         *,
         application: str,
         namespace: str,
-        application_args: Optional[List[str]] = None,
-        conf: Optional[Dict[str, str]] = None,
-        name: Optional[str] = None,
-        kubernetes_service_account: Optional[str] = None,
-        image: Optional[str] = None,
-        driver_pod_template: Optional[str] = None,
-        executor_pod_template: Optional[str] = None,
+        application_args: list[str] | None = None,
+        conf: dict[str, str] | None = None,
+        name: str | None = None,
+        kubernetes_service_account: str | None = None,
+        image: str | None = None,
+        driver_pod_template: str | None = None,
+        executor_pod_template: str | None = None,
         executor_pod_cleanup_policy: str = "OnSuccess",
-        driver_memory: Optional[str] = None,
-        driver_cores: Optional[str] = None,
-        executor_memory: Optional[str] = None,
-        executor_cores: Optional[str] = None,
-        num_executors: Optional[str] = None,
+        driver_memory: str | None = None,
+        driver_cores: str | None = None,
+        executor_memory: str | None = None,
+        executor_cores: str | None = None,
+        num_executors: str | None = None,
         verbose: bool = False,
         conn_id: str = "spark_default",
         kubernetes_master: str = "k8s://https://kubernetes.default.svc",
@@ -104,10 +104,10 @@ class SparkKubernetesOperator(BaseOperator):
         self.conn_id = conn_id
         self.kubernetes_master = kubernetes_master
 
-        self._job_id: Optional[str] = None
-        self._hook: Optional[SparkHook] = None
+        self._job_id: str | None = None
+        self._hook: SparkHook | None = None
 
-    def execute(self, context: Dict[str, Any]) -> str:
+    def execute(self, context: dict[str, Any]) -> str:
         """
         Execute the Spark Kubernetes job.
 
@@ -171,7 +171,9 @@ class SparkKubernetesOperator(BaseOperator):
 
             if not success:
                 status = self._hook.get_job_status(self._job_id)
-                error_msg = f"Spark Kubernetes job {self._job_id} failed with status: {status.value}"
+                error_msg = (
+                    f"Spark Kubernetes job {self._job_id} failed with status: {status.value}"
+                )
                 logger.error(error_msg)
 
                 # Try to get logs

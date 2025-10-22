@@ -5,9 +5,6 @@ Tests validation logic for DAG configurations against JSON schema,
 circular dependency detection, and operator reference verification.
 """
 
-import json
-from pathlib import Path
-
 import pytest
 
 
@@ -143,7 +140,7 @@ class TestConfigValidator:
         }
 
         validator = ConfigValidator()
-        result = validator.validate(invalid_config)
+        validator.validate(invalid_config)
 
         # Note: This might pass schema validation if schedule_interval is just a string
         # But should fail semantic validation for invalid cron expression
@@ -230,7 +227,9 @@ class TestConfigValidator:
         result = validator.validate_from_file("/non/existent/file.json")
 
         assert result.is_valid is False
-        assert any("not found" in error.lower() or "file" in error.lower() for error in result.errors)
+        assert any(
+            "not found" in error.lower() or "file" in error.lower() for error in result.errors
+        )
 
     @pytest.mark.parametrize(
         "invalid_operator",
@@ -260,7 +259,7 @@ class TestConfigValidator:
         }
 
         validator = ConfigValidator()
-        result = validator.validate(config)
+        validator.validate(config)
 
         # Operator validation might be deferred to operator registry
         # This test documents expected behavior

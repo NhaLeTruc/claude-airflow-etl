@@ -5,11 +5,10 @@ Custom operator for sending notifications to Microsoft Teams via Incoming Webhoo
 Supports message cards with titles, theme colors, facts sections, and action buttons.
 """
 
-import requests
 import json
-from typing import Any, Dict, List, Optional
-from datetime import timedelta
+from typing import Any
 
+import requests
 from airflow.exceptions import AirflowException
 from airflow.utils.decorators import apply_defaults
 
@@ -46,10 +45,10 @@ class TeamsNotificationOperator(BaseNotificationOperator):
         *,
         webhook_url: str,
         message_template: str,
-        title: Optional[str] = None,
-        theme_color: Optional[str] = None,
-        facts: Optional[List[Dict[str, str]]] = None,
-        actions: Optional[List[Dict[str, Any]]] = None,
+        title: str | None = None,
+        theme_color: str | None = None,
+        facts: list[dict[str, str]] | None = None,
+        actions: list[dict[str, Any]] | None = None,
         timeout: int = 30,
         **kwargs,
     ):
@@ -70,13 +69,11 @@ class TeamsNotificationOperator(BaseNotificationOperator):
         self.actions = actions or []
         self.timeout = timeout
 
-        logger.info(
-            f"Teams operator initialized with webhook (hidden for security)"
-        )
+        logger.info("Teams operator initialized with webhook (hidden for security)")
 
     def _build_message_card(
-        self, title: str, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, title: str, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Build Microsoft Teams MessageCard payload.
 
@@ -99,10 +96,12 @@ class TeamsNotificationOperator(BaseNotificationOperator):
         if self.facts:
             rendered_facts = []
             for fact in self.facts:
-                rendered_facts.append({
-                    "name": self.render_template(fact.get("name", ""), context),
-                    "value": self.render_template(fact.get("value", ""), context),
-                })
+                rendered_facts.append(
+                    {
+                        "name": self.render_template(fact.get("name", ""), context),
+                        "value": self.render_template(fact.get("value", ""), context),
+                    }
+                )
 
             card["sections"] = [{"facts": rendered_facts}]
 
@@ -112,7 +111,7 @@ class TeamsNotificationOperator(BaseNotificationOperator):
 
         return card
 
-    def send_notification(self, message: str, context: Dict[str, Any]) -> bool:
+    def send_notification(self, message: str, context: dict[str, Any]) -> bool:
         """
         Send notification to Microsoft Teams webhook.
 
@@ -129,11 +128,11 @@ class TeamsNotificationOperator(BaseNotificationOperator):
             payload = self._build_message_card(rendered_title, message, context)
 
             logger.info(
-                f"Sending Teams notification",
+                "Sending Teams notification",
                 extra={
                     "title": rendered_title,
                     "payload_size": len(json.dumps(payload)),
-                }
+                },
             )
 
             # Send POST request to webhook
@@ -147,8 +146,8 @@ class TeamsNotificationOperator(BaseNotificationOperator):
             # Check response
             if response.ok and response.status_code == 200:
                 logger.info(
-                    f"Teams notification sent successfully",
-                    extra={"status_code": response.status_code}
+                    "Teams notification sent successfully",
+                    extra={"status_code": response.status_code},
                 )
                 return True
             else:

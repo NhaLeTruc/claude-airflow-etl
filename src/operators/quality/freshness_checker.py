@@ -5,13 +5,14 @@ Validates data freshness by checking timestamp age against
 maximum acceptable age thresholds.
 """
 
-from typing import Any, Dict, Optional, List
-from datetime import datetime, timedelta
-from airflow.utils.decorators import apply_defaults
-from airflow.exceptions import AirflowException
+from datetime import UTC, datetime
+from typing import Any
 
-from src.operators.quality.base_quality_operator import BaseQualityOperator
+from airflow.exceptions import AirflowException
+from airflow.utils.decorators import apply_defaults
+
 from src.hooks.warehouse_hook import WarehouseHook
+from src.operators.quality.base_quality_operator import BaseQualityOperator
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -39,12 +40,12 @@ class FreshnessChecker(BaseQualityOperator):
     def __init__(
         self,
         *,
-        timestamp_column: Optional[str] = None,
-        max_age_hours: Optional[float] = None,
-        max_age_minutes: Optional[float] = None,
-        sla_hours: Optional[float] = None,
-        where_clause: Optional[str] = None,
-        timestamp_columns: Optional[List[str]] = None,
+        timestamp_column: str | None = None,
+        max_age_hours: float | None = None,
+        max_age_minutes: float | None = None,
+        sla_hours: float | None = None,
+        where_clause: str | None = None,
+        timestamp_columns: list[str] | None = None,
         **kwargs,
     ):
         """Initialize FreshnessChecker."""
@@ -64,7 +65,7 @@ class FreshnessChecker(BaseQualityOperator):
         if max_age_minutes and not max_age_hours:
             self.max_age_hours = max_age_minutes / 60.0
 
-    def get_max_timestamp(self) -> Optional[datetime]:
+    def get_max_timestamp(self) -> datetime | None:
         """
         Get maximum timestamp from table.
 
@@ -82,7 +83,7 @@ class FreshnessChecker(BaseQualityOperator):
         result = hook.get_first(query)
         return result[0] if result and result[0] else None
 
-    def get_max_timestamps(self) -> Dict[str, Optional[datetime]]:
+    def get_max_timestamps(self) -> dict[str, datetime | None]:
         """
         Get maximum timestamps for multiple columns.
 
@@ -104,7 +105,7 @@ class FreshnessChecker(BaseQualityOperator):
 
         return results
 
-    def calculate_age(self, timestamp: datetime) -> Dict[str, float]:
+    def calculate_age(self, timestamp: datetime) -> dict[str, float]:
         """
         Calculate age of timestamp.
 
@@ -115,8 +116,7 @@ class FreshnessChecker(BaseQualityOperator):
 
         # Handle timezone-aware timestamps
         if timestamp.tzinfo is not None and now.tzinfo is None:
-            from datetime import timezone
-            now = now.replace(tzinfo=timezone.utc)
+            now = now.replace(tzinfo=UTC)
         elif timestamp.tzinfo is None and now.tzinfo is not None:
             now = now.replace(tzinfo=None)
 
@@ -129,7 +129,7 @@ class FreshnessChecker(BaseQualityOperator):
             "age_minutes": round(age_minutes, 2),
         }
 
-    def perform_check(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def perform_check(self, context: dict[str, Any]) -> dict[str, Any]:
         """
         Perform freshness check.
 
@@ -145,8 +145,7 @@ class FreshnessChecker(BaseQualityOperator):
 
                 # Find most recent timestamp
                 max_timestamp = max(
-                    (ts for ts in timestamps.values() if ts is not None),
-                    default=None
+                    (ts for ts in timestamps.values() if ts is not None), default=None
                 )
 
                 result = {
@@ -193,12 +192,14 @@ class FreshnessChecker(BaseQualityOperator):
             else:
                 value = 1.0 if passed else 0.0
 
-            result.update({
-                "passed": passed,
-                "value": round(value, 3),
-                "expected": 1.0,
-                "max_age_hours": self.max_age_hours,
-            })
+            result.update(
+                {
+                    "passed": passed,
+                    "value": round(value, 3),
+                    "expected": 1.0,
+                    "max_age_hours": self.max_age_hours,
+                }
+            )
 
             # Add message if failed
             if not passed:

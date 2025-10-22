@@ -5,12 +5,13 @@ Validates table schema against expected column definitions including
 data types, nullable constraints, and column presence.
 """
 
-from typing import Any, Dict, List, Optional
-from airflow.utils.decorators import apply_defaults
-from airflow.exceptions import AirflowException
+from typing import Any
 
-from src.operators.quality.base_quality_operator import BaseQualityOperator, QualitySeverity
+from airflow.exceptions import AirflowException
+from airflow.utils.decorators import apply_defaults
+
 from src.hooks.warehouse_hook import WarehouseHook
+from src.operators.quality.base_quality_operator import BaseQualityOperator
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -34,7 +35,7 @@ class SchemaValidator(BaseQualityOperator):
     def __init__(
         self,
         *,
-        expected_schema: Dict[str, Any],
+        expected_schema: dict[str, Any],
         check_types: bool = True,
         check_nullability: bool = False,
         check_column_order: bool = False,
@@ -53,7 +54,7 @@ class SchemaValidator(BaseQualityOperator):
         self.check_column_order = check_column_order
         self.allow_extra_columns = allow_extra_columns
 
-    def get_table_schema(self) -> List[Dict[str, Any]]:
+    def get_table_schema(self) -> list[dict[str, Any]]:
         """
         Get actual table schema from database.
 
@@ -123,7 +124,7 @@ class SchemaValidator(BaseQualityOperator):
 
         return type_map.get(db_type.lower(), db_type.upper())
 
-    def perform_check(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def perform_check(self, context: dict[str, Any]) -> dict[str, Any]:
         """
         Perform schema validation check.
 
@@ -141,16 +142,14 @@ class SchemaValidator(BaseQualityOperator):
 
             # Check for missing columns
             missing_columns = [
-                col_name for col_name in expected_col_map.keys()
-                if col_name not in actual_col_map
+                col_name for col_name in expected_col_map if col_name not in actual_col_map
             ]
 
             # Check for extra columns
             extra_columns = []
             if not self.allow_extra_columns:
                 extra_columns = [
-                    col_name for col_name in actual_col_map.keys()
-                    if col_name not in expected_col_map
+                    col_name for col_name in actual_col_map if col_name not in expected_col_map
                 ]
 
             # Check data types
@@ -162,11 +161,13 @@ class SchemaValidator(BaseQualityOperator):
                         expected_type = expected_col["type"].upper()
 
                         if actual_type != expected_type:
-                            type_mismatches.append({
-                                "column": col_name,
-                                "expected": expected_type,
-                                "actual": actual_type,
-                            })
+                            type_mismatches.append(
+                                {
+                                    "column": col_name,
+                                    "expected": expected_type,
+                                    "actual": actual_type,
+                                }
+                            )
 
             # Check nullability
             nullability_mismatches = []
@@ -177,11 +178,13 @@ class SchemaValidator(BaseQualityOperator):
                         expected_nullable = expected_col["nullable"]
 
                         if actual_nullable != expected_nullable:
-                            nullability_mismatches.append({
-                                "column": col_name,
-                                "expected_nullable": expected_nullable,
-                                "actual_nullable": actual_nullable,
-                            })
+                            nullability_mismatches.append(
+                                {
+                                    "column": col_name,
+                                    "expected_nullable": expected_nullable,
+                                    "actual_nullable": actual_nullable,
+                                }
+                            )
 
             # Determine if check passed
             passed = (

@@ -5,11 +5,12 @@ Tests cover bot API integration, message formatting, chat ID validation,
 parse modes (Markdown/HTML), and silent notification options.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
-from airflow.exceptions import AirflowException
 import json
+from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
+from airflow.exceptions import AirflowException
 
 
 @pytest.fixture
@@ -111,7 +112,7 @@ class TestTelegramNotificationOperator:
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_send_message_api_call_success(self, mock_post, mock_context):
         """Test successful Telegram Bot API sendMessage call."""
         try:
@@ -139,7 +140,7 @@ class TestTelegramNotificationOperator:
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_send_message_api_call_failure(self, mock_post, mock_context):
         """Test Telegram Bot API error handling."""
         try:
@@ -167,7 +168,7 @@ class TestTelegramNotificationOperator:
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_markdown_parse_mode(self, mock_post, mock_context):
         """Test Markdown parse mode for message formatting."""
         try:
@@ -190,13 +191,15 @@ class TestTelegramNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
-            assert payload['parse_mode'] == "Markdown"
+            assert payload["parse_mode"] == "Markdown"
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_html_parse_mode(self, mock_post, mock_context):
         """Test HTML parse mode for message formatting."""
         try:
@@ -219,13 +222,15 @@ class TestTelegramNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
-            assert payload['parse_mode'] == "HTML"
+            assert payload["parse_mode"] == "HTML"
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_silent_notification_option(self, mock_post, mock_context):
         """Test silent notification (disable notification sound)."""
         try:
@@ -248,13 +253,15 @@ class TestTelegramNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
-            assert payload.get('disable_notification') is True
+            assert payload.get("disable_notification") is True
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_template_rendering_in_message(self, mock_post, mock_context):
         """Test Jinja2 template rendering in message."""
         try:
@@ -276,15 +283,17 @@ class TestTelegramNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
             # Verify template was rendered
-            assert "test_dag" in payload['text']
-            assert "2025-01-15" in payload['text']
+            assert "test_dag" in payload["text"]
+            assert "2025-01-15" in payload["text"]
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_disable_web_page_preview(self, mock_post, mock_context):
         """Test disabling web page preview for links."""
         try:
@@ -307,18 +316,21 @@ class TestTelegramNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
-            assert payload.get('disable_web_page_preview') is True
+            assert payload.get("disable_web_page_preview") is True
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_connection_timeout_handling(self, mock_post, mock_context):
         """Test handling of connection timeout errors."""
         try:
-            from src.operators.notifications.telegram_operator import TelegramNotificationOperator
             import requests
+
+            from src.operators.notifications.telegram_operator import TelegramNotificationOperator
 
             mock_post.side_effect = requests.Timeout("Connection timeout")
 
@@ -334,12 +346,13 @@ class TestTelegramNotificationOperator:
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_network_error_handling(self, mock_post, mock_context):
         """Test handling of network connection errors."""
         try:
-            from src.operators.notifications.telegram_operator import TelegramNotificationOperator
             import requests
+
+            from src.operators.notifications.telegram_operator import TelegramNotificationOperator
 
             mock_post.side_effect = requests.ConnectionError("Network unreachable")
 
@@ -360,11 +373,11 @@ class TestTelegramNotificationOperator:
         try:
             from src.operators.notifications.telegram_operator import TelegramNotificationOperator
 
-            assert hasattr(TelegramNotificationOperator, 'template_fields')
+            assert hasattr(TelegramNotificationOperator, "template_fields")
             template_fields = TelegramNotificationOperator.template_fields
 
             # Should include message_template
-            assert 'message_template' in template_fields
+            assert "message_template" in template_fields
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
@@ -373,13 +386,13 @@ class TestTelegramNotificationOperator:
         try:
             from src.operators.notifications.telegram_operator import TelegramNotificationOperator
 
-            assert hasattr(TelegramNotificationOperator, 'ui_color')
+            assert hasattr(TelegramNotificationOperator, "ui_color")
             # Telegram typically uses blue colors
-            assert TelegramNotificationOperator.ui_color.startswith('#')
+            assert TelegramNotificationOperator.ui_color.startswith("#")
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_message_length_limit_handling(self, mock_post, mock_context):
         """Test handling of Telegram's 4096 character limit."""
         try:
@@ -405,14 +418,16 @@ class TestTelegramNotificationOperator:
             operator.execute(mock_context)
 
             call_args = mock_post.call_args
-            payload = call_args[1]['json'] if 'json' in call_args[1] else json.loads(call_args[1]['data'])
+            payload = (
+                call_args[1]["json"] if "json" in call_args[1] else json.loads(call_args[1]["data"])
+            )
 
             # Message should be truncated or operator should raise error
-            assert len(payload['text']) <= 4096 or mock_post.call_count > 1
+            assert len(payload["text"]) <= 4096 or mock_post.call_count > 1
         except ImportError:
             pytest.skip("TelegramNotificationOperator not implemented yet")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_retry_on_rate_limit(self, mock_post, mock_context):
         """Test retry behavior on rate limit (429 error)."""
         try:

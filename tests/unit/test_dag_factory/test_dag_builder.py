@@ -9,7 +9,6 @@ from datetime import datetime
 
 import pytest
 from airflow import DAG
-from airflow.operators.bash import BashOperator
 
 
 class TestDAGBuilder:
@@ -148,7 +147,7 @@ class TestDAGBuilder:
 
     def test_circular_dependency_raises_error(self):
         """Test that circular dependencies raise error."""
-        from dags.factory.dag_builder import DAGBuilder, CircularDependencyError
+        from dags.factory.dag_builder import CircularDependencyError, DAGBuilder
 
         config_with_cycle = {
             "dag_id": "circular_dag",
