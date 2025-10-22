@@ -8,7 +8,6 @@ from typing import Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
 from src.hooks.spark_hook import SparkHook
 from src.utils.logger import get_logger
@@ -35,11 +34,11 @@ class SparkYarnOperator(BaseOperator):
     :param conn_id: Airflow connection ID for Spark
     """
 
-    template_fields = ("application", "application_args", "queue", "conf", "name")
+    template_fields = ("application", "application_args", "conf", "name")  # Removed 'queue' - reserved by Airflow executor
     template_ext = (".py", ".jar")
     ui_color = "#d4a76a"  # Brown/tan for YARN
 
-    @apply_defaults
+
     def __init__(
         self,
         *,

@@ -12,7 +12,6 @@ from typing import Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
 from src.utils.logger import get_logger
 
@@ -50,7 +49,6 @@ class BaseQualityOperator(BaseOperator):
     template_fields = ("table_name",)
     ui_color = "#f0ad4e"  # Orange for quality checks
 
-    @apply_defaults
     def __init__(
         self,
         *,

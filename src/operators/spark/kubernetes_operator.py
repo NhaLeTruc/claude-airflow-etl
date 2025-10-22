@@ -8,7 +8,6 @@ from typing import Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
 from src.hooks.spark_hook import SparkHook
 from src.utils.logger import get_logger
@@ -44,7 +43,7 @@ class SparkKubernetesOperator(BaseOperator):
     template_ext = (".py", ".jar")
     ui_color = "#326ce5"  # Blue for Kubernetes
 
-    @apply_defaults
+
     def __init__(
         self,
         *,

@@ -10,7 +10,6 @@ from typing import Any
 
 import requests
 from airflow.exceptions import AirflowException
-from airflow.utils.decorators import apply_defaults
 
 from src.operators.notifications.base_notification import BaseNotificationOperator
 from src.utils.logger import get_logger
@@ -40,7 +39,7 @@ class TelegramNotificationOperator(BaseNotificationOperator):
     # Telegram message length limit
     MAX_MESSAGE_LENGTH = 4096
 
-    @apply_defaults
+
     def __init__(
         self,
         *,

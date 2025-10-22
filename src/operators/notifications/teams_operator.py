@@ -10,7 +10,6 @@ from typing import Any
 
 import requests
 from airflow.exceptions import AirflowException
-from airflow.utils.decorators import apply_defaults
 
 from src.operators.notifications.base_notification import BaseNotificationOperator
 from src.utils.logger import get_logger
@@ -39,7 +38,7 @@ class TeamsNotificationOperator(BaseNotificationOperator):
     template_fields = ("message_template", "title", "webhook_url")
     ui_color = "#5b5fc7"  # Microsoft Teams purple
 
-    @apply_defaults
+
     def __init__(
         self,
         *,
@@ -55,12 +54,14 @@ class TeamsNotificationOperator(BaseNotificationOperator):
         """Initialize TeamsNotificationOperator."""
         super().__init__(message_template=message_template, **kwargs)
 
-        # Validate webhook URL
+        # Validate webhook URL (skip validation if it contains Jinja2 template syntax)
         if not webhook_url:
             raise ValueError("webhook_url parameter is required")
 
-        if not webhook_url.startswith("https://"):
-            raise ValueError(f"Invalid webhook URL: {webhook_url}. Must start with 'https://'")
+        # Skip validation if webhook_url contains Jinja2 template markers (will be rendered at runtime)
+        if "{{" not in webhook_url and "{%" not in webhook_url:
+            if not webhook_url.startswith("https://"):
+                raise ValueError(f"Invalid webhook URL: {webhook_url}. Must start with 'https://'")
 
         self.webhook_url = webhook_url
         self.title = title or "Airflow Notification"
