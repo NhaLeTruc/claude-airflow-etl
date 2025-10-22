@@ -1,7 +1,7 @@
 # Apache Airflow ETL Demo Platform
 
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
-[![Apache Airflow 2.8](https://img.shields.io/badge/airflow-2.8-blue.svg)](https://airflow.apache.org/)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Apache Airflow 2.10](https://img.shields.io/badge/airflow-2.10-blue.svg)](https://airflow.apache.org/)
 [![CI Pipeline](https://img.shields.io/badge/CI-passing-brightgreen.svg)](./.github/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen.svg)](./tests/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -270,11 +270,20 @@ On merge to `main`:
 
 ## Documentation
 
+### Getting Started
+- **[Quick Start - Development](docs/QUICK_START_DEV.md)** - 5-minute setup guide for developers
 - **[Quickstart Guide](specs/001-build-a-full/quickstart.md)** - Detailed setup and usage
+- **[Development Setup Fixes](docs/DEVELOPMENT_SETUP_FIXES.md)** - Python 3.12 compatibility & troubleshooting
+
+### Technical Documentation
 - **[Architecture](docs/architecture.md)** - System design and components
 - **[DAG Configuration](docs/dag_configuration.md)** - JSON schema reference
 - **[Operator Guide](docs/operator_guide.md)** - Custom operator usage
 - **[Development Guide](docs/development.md)** - Local development workflow
+
+### Project Information
+- **[Changelog](CHANGELOG.md)** - Version history and changes
+- **[Session Summary](SESSION_SUMMARY.md)** - Latest development session notes
 
 ## Contributing
 
