@@ -9,7 +9,7 @@ from typing import Any
 
 from airflow.models import BaseOperator
 from airflow.operators.bash import BashOperator
-from airflow.operators.dummy import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
 # Import custom Spark operators

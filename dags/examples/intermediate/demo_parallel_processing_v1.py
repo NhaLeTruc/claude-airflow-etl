@@ -293,7 +293,7 @@ with DAG(
     dag_id="demo_parallel_processing_v1",
     default_args=default_args,
     description="Demonstrates parallel task execution with fan-out/fan-in pattern",
-    schedule_interval=None,  # Manual trigger for demo
+    schedule=None,  # Manual trigger for demo
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["intermediate", "parallel", "pattern", "demo"],

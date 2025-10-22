@@ -5,7 +5,7 @@
 # Purpose: Extends base image with custom operators and dependencies
 # ============================================================================
 
-FROM apache/airflow:2.8.1-python3.11
+FROM apache/airflow:3.1.0-python3.12
 
 # Switch to root for system-level installations
 USER root
@@ -23,15 +23,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Switch back to airflow user
 USER airflow
 
-# Copy requirements file
+# Copy requirements files
 COPY requirements.txt /opt/airflow/requirements.txt
+COPY requirements-dev.txt /opt/airflow/requirements-dev.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --user -r /opt/airflow/requirements.txt
+# Install Python dependencies (including dev dependencies for testing)
+RUN pip install --no-cache-dir --user -r /opt/airflow/requirements-dev.txt
 
 # Set environment variables
 ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
 ENV AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+ENV AIRFLOW__CORE__AUTH_MANAGER=airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5m --retries=3 \

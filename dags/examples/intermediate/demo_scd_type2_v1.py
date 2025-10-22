@@ -32,10 +32,13 @@ BUSINESS VALUE:
 from datetime import timedelta
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
-from airflow.operators.postgres_operator import PostgresOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.operators.python import PythonOperator
-from airflow.utils.dates import days_ago
+from datetime import datetime, timedelta
+
+def days_ago(n):
+    return datetime.now() - timedelta(days=n)
 
 from src.hooks.warehouse_hook import WarehouseHook
 from src.utils.logger import get_logger
@@ -57,7 +60,7 @@ dag = DAG(
     dag_id="demo_scd_type2_v1",
     default_args=default_args,
     description="SCD Type 2 pattern for customer dimension history tracking",
-    schedule_interval="@daily",
+    schedule="@daily",
     start_date=days_ago(7),
     catchup=True,
     max_active_runs=1,
@@ -384,7 +387,7 @@ demo_historical_query = PostgresOperator(
 
 
 # Task 6: Pipeline completion
-pipeline_complete = DummyOperator(
+pipeline_complete = EmptyOperator(
     task_id="scd_type2_complete",
     dag=dag,
 )
