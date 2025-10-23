@@ -29,17 +29,31 @@ class WarehouseHook(BaseHook):
     conn_type = "postgres"
     hook_name = "Warehouse Database"
 
-    def __init__(self, warehouse_conn_id: str = "warehouse_default") -> None:
+    def __init__(
+        self,
+        warehouse_conn_id: str | None = None,
+        postgres_conn_id: str | None = None,
+    ) -> None:
         """
         Initialize warehouse hook.
 
+        Supports both Airflow 2.x (postgres_conn_id) and 3.x (warehouse_conn_id) styles.
+
         Args:
-            warehouse_conn_id: Airflow connection ID for warehouse database
+            warehouse_conn_id: Airflow connection ID (Airflow 3.x style)
+            postgres_conn_id: Airflow connection ID (Airflow 2.x style, for backward compatibility)
+
+        Raises:
+            ValueError: If neither connection ID is provided
         """
         super().__init__()
-        self.warehouse_conn_id = warehouse_conn_id
+
+        # Support both parameter names for backward compatibility
+        conn_id = warehouse_conn_id or postgres_conn_id or "warehouse_default"
+
+        self.warehouse_conn_id = conn_id
         self._connection: psycopg2.extensions.connection | None = None
-        logger.debug("WarehouseHook initialized", conn_id=warehouse_conn_id)
+        logger.debug("WarehouseHook initialized", conn_id=conn_id)
 
     def get_conn(self) -> psycopg2.extensions.connection:
         """
@@ -177,6 +191,74 @@ class WarehouseHook(BaseHook):
         except Exception as e:
             conn.rollback()
             logger.error("Bulk insert failed", table=table, error=str(e))
+            raise
+
+        finally:
+            if cursor:
+                cursor.close()
+
+    def get_first(
+        self, query: str, parameters: tuple[Any, ...] | dict[str, Any] | None = None
+    ) -> tuple[Any, ...] | None:
+        """
+        Execute query and return first row as tuple.
+
+        Args:
+            query: SQL query string
+            parameters: Query parameters for safe binding (tuple or dict)
+
+        Returns:
+            First row as tuple, or None if no results
+
+        Raises:
+            Exception: If query execution fails
+        """
+        conn = self.get_conn()
+        cursor = None
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, parameters)
+            result = cursor.fetchone()
+            logger.debug("Query executed, returning first row", has_result=result is not None)
+            return result
+
+        except Exception as e:
+            logger.error("Query execution failed", error=str(e), query=query[:100])
+            raise
+
+        finally:
+            if cursor:
+                cursor.close()
+
+    def get_records(
+        self, query: str, parameters: tuple[Any, ...] | dict[str, Any] | None = None
+    ) -> list[tuple[Any, ...]]:
+        """
+        Execute query and return all rows as list of tuples.
+
+        Args:
+            query: SQL query string
+            parameters: Query parameters for safe binding (tuple or dict)
+
+        Returns:
+            List of rows as tuples
+
+        Raises:
+            Exception: If query execution fails
+        """
+        conn = self.get_conn()
+        cursor = None
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, parameters)
+            results = cursor.fetchall()
+            logger.debug("Query executed successfully", rows=len(results))
+            return results
+
+        except Exception as e:
+            logger.error("Query execution failed", error=str(e), query=query[:100])
             raise
 
         finally:

@@ -7,9 +7,9 @@
 
 x-airflow-common:
   &airflow-common
-  build:
-    context: .
-    dockerfile: docker/airflow/Dockerfile
+  # Migrated from Airflow 3.0 to 2.10.5 for stability
+  # Using official image instead of custom build
+  image: apache/airflow:2.10.5-python3.12
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -19,6 +19,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    # Removed Airflow 3.0 specific configs (TASK_RUNNER, MP_START_METHOD)
     PYTHONPATH: /opt/airflow:/opt/airflow/dags:/opt/airflow/src
     # Warehouse connection environment variables
     WAREHOUSE_HOST: ${WAREHOUSE_HOST:-airflow-warehouse}
@@ -131,6 +132,35 @@ services:
       - airflow-network
 
   # ============================================================================
+  # Airflow - Database Schema Fixes
+  # ============================================================================
+  airflow-db-fix:
+    image: postgres:15-alpine
+    container_name: airflow-db-fix
+    environment:
+      PGHOST: ${POSTGRES_AIRFLOW_HOST:-airflow-postgres}
+      PGPORT: ${POSTGRES_AIRFLOW_PORT:-5432}
+      PGDATABASE: ${POSTGRES_AIRFLOW_DB:-airflow}
+      PGUSER: ${POSTGRES_AIRFLOW_USER:-airflow}
+      PGPASSWORD: ${POSTGRES_AIRFLOW_PASSWORD:-airflow}
+    command:
+      - sh
+      - -c
+      - |
+        echo "Waiting for Airflow initialization to complete..."
+        sleep 5
+        echo "Applying database schema fixes..."
+        psql -f /docker/airflow/fix_callback_type.sql
+        echo "Database schema fixes applied successfully"
+    volumes:
+      - ./docker:/docker:ro
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - airflow-network
+
+  # ============================================================================
   # Airflow - API Server (replaces webserver in Airflow 3.0+)
   # ============================================================================
   airflow-webserver:
@@ -184,11 +214,32 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
-    restart: always
+      start_period: 60s
+    restart: unless-stopped
     depends_on:
       airflow-init:
         condition: service_completed_successfully
+      airflow-db-fix:
+        condition: service_completed_successfully
+      airflow-webserver:
+        condition: service_healthy
+      airflow-dag-processor:
+        condition: service_healthy
+    environment:
+      <<: *airflow-common-env
+      # Scheduler robustness settings
+      AIRFLOW__SCHEDULER__SCHEDULER_HEARTBEAT_SEC: 5
+      AIRFLOW__SCHEDULER__MAX_TIS_PER_QUERY: 512
+      AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: 'false'
+      AIRFLOW__SCHEDULER__ZOMBIE_TASK_TIMEOUT: 300
+      AIRFLOW__CORE__PARALLELISM: 32
+      AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 16
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
     networks:
       - airflow-network
 
